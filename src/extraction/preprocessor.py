@@ -11,7 +11,7 @@ Preprocessor pour nettoyer et normaliser le texte extrait
 """
 import re
 from typing import List, Set
-from src.extraction.document_schemas import ContentBlock
+from document_schemas import ContentBlock
 
 
 class TextPreprocessor:

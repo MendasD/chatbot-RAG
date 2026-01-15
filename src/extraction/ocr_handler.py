@@ -1,59 +1,57 @@
-### **ocr_handler.py**
-# - Charge le modèle Chandra une seule fois
-# - Traite les images extraites du PDF
-# - Traite les pages scannées complètes
-# - Génère du markdown/HTML/JSON avec mise en page
-# - Parse le résultat pour structurer les données
-
 """
-Gestionnaire OCR avec le modèle Chandra
+Gestionnaire OCR avec le modèle docTR
 Traite les images et pages scannées pour extraire le contenu structuré
 """
 import torch
-from transformers import AutoModel, AutoProcessor
+from doctr.models import ocr_predictor
+from doctr.io import DocumentFile
 from PIL import Image
+import numpy as np
 from typing import List, Optional, Dict
 import re
-from pathlib import Path
-import os
 
-# Chemin absolu quand on veut tester dans un notebook jupyter
-# from src.extraction.document_schemas import ContentBlock, BoundingBox
 from document_schemas import ContentBlock, BoundingBox
 
-# Ajout de
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 
-class ChandraOCRHandler:
-    """Handler pour le modèle Chandra OCR"""
+class DocTROCRHandler:
+    """Handler pour le modèle docTR OCR"""
     
-    def __init__(self, model_name: str = "datalab-to/chandra", device: str = "cuda", cache_dir: Optional[str] = None):
+    def __init__(
+        self, 
+        det_arch: str = "db_resnet50",
+        reco_arch: str = "crnn_vgg16_bn",
+        device: str = "cuda",
+        pretrained: bool = True
+    ):
         """
-        Initialise le modèle Chandra
+        Initialise le modèle docTR
         
         Args:
-            model_name: Nom du modèle sur HuggingFace
+            det_arch: Architecture de détection (db_resnet50, db_mobilenet_v3_large, etc.)
+            reco_arch: Architecture de reconnaissance (crnn_vgg16_bn, crnn_mobilenet_v3_small, etc.)
             device: Device à utiliser (cuda/cpu)
+            pretrained: Utiliser les poids pré-entraînés
         """
         self.device = device if torch.cuda.is_available() else "cpu"
-        print(f"Chargement de Chandra sur {self.device}...")
+        print(f"Chargement de docTR sur {self.device}...")
         
         try:
-            print("Début du chargement...")
-            self.model = AutoModel.from_pretrained(model_name, 
-                                                   cache_dir=cache_dir,  
-                                                   dtype=torch.float32,
-                                                   low_cpu_mem_usage=True,
-                                                   trust_remote_code=True
-                                                )
-                                                #.to(self.device)
+            # Charge le modèle OCR complet (détection + reconnaissance)
+            self.model = ocr_predictor(
+                det_arch=det_arch,
+                reco_arch=reco_arch,
+                pretrained=pretrained,
+                assume_straight_pages=True
+            )
             
-            print("Modèle chargé...")
-            self.processor = AutoProcessor.from_pretrained(model_name, cache_dir=cache_dir)
-            self.model.eval()
-            print("Chandra chargé avec succès")
+            # Configure le device
+            if self.device == "cuda":
+                self.model.det_predictor.model.to(self.device)
+                self.model.reco_predictor.model.to(self.device)
+            
+            print("docTR chargé avec succès")
         except Exception as e:
-            print(f"Erreur lors du chargement de Chandra: {e}")
+            print(f"Erreur lors du chargement de docTR: {e}")
             raise
     
     def process_image(
@@ -64,40 +62,27 @@ class ChandraOCRHandler:
         image_id: Optional[str] = None
     ) -> List[ContentBlock]:
         """
-        Traite une image avec Chandra
+        Traite une image avec docTR
         
         Args:
             image: Image PIL à traiter
             page_number: Numéro de page
-            prompt_type: Type de prompt ("ocr_layout", "ocr", "caption")
+            prompt_type: Type de prompt (pour compatibilité, non utilisé avec docTR)
             image_id: ID de l'image (optionnel)
             
         Returns:
             Liste de ContentBlocks extraits
         """
         try:
-            # Prépare le batch
-            from chandra.model.schema import BatchInputItem
-            from chandra.model.hf import generate_hf
-            from chandra.output import parse_markdown
+            # Convertit PIL Image en numpy array
+            img_array = np.array(image)
             
-            batch = [
-                BatchInputItem(
-                    image=image,
-                    prompt_type=prompt_type
-                )
-            ]
+            # Exécute l'OCR
+            result = self.model([img_array])
             
-            # Génère le résultat
-            with torch.no_grad():
-                result = generate_hf(batch, self.model)[0]
-            
-            # Parse le markdown
-            markdown = parse_markdown(result.raw)
-            
-            # Convertit en ContentBlocks
-            blocks = self._parse_markdown_to_blocks(
-                markdown, 
+            # Parse le résultat en ContentBlocks
+            blocks = self._parse_doctr_result(
+                result, 
                 page_number, 
                 image_id
             )
@@ -136,7 +121,7 @@ class ChandraOCRHandler:
         image_id: str
     ) -> ContentBlock:
         """
-        Génère une description pour une image
+        Extrait le texte d'une image et crée une description
         
         Args:
             image: Image PIL
@@ -144,7 +129,7 @@ class ChandraOCRHandler:
             image_id: ID de l'image
             
         Returns:
-            ContentBlock avec description
+            ContentBlock avec description/texte extrait
         """
         blocks = self.process_image(
             image, 
@@ -164,17 +149,17 @@ class ChandraOCRHandler:
             image_description=description
         )
     
-    def _parse_markdown_to_blocks(
+    def _parse_doctr_result(
         self, 
-        markdown: str, 
+        result, 
         page_number: int,
         image_id: Optional[str] = None
     ) -> List[ContentBlock]:
         """
-        Parse le markdown généré par Chandra en ContentBlocks
+        Parse le résultat docTR en ContentBlocks
         
         Args:
-            markdown: Texte markdown
+            result: Résultat de docTR
             page_number: Numéro de page
             image_id: ID image si applicable
             
@@ -182,101 +167,92 @@ class ChandraOCRHandler:
             Liste de ContentBlocks
         """
         blocks = []
-        lines = markdown.split('\n')
         
-        i = 0
-        while i < len(lines):
-            line = lines[i].strip()
+        # Récupère la première page du résultat
+        if len(result.pages) == 0:
+            return blocks
+        
+        page = result.pages[0]
+        
+        # Parcourt les blocs de la page
+        for block_idx, block in enumerate(page.blocks):
+            block_text_lines = []
+            block_bbox = None
             
-            if not line:
-                i += 1
+            # Parcourt les lignes du bloc
+            for line in block.lines:
+                line_text = " ".join([word.value for word in line.words])
+                block_text_lines.append(line_text)
+                
+                # Récupère les coordonnées du premier mot pour bbox
+                if block_bbox is None and line.words:
+                    first_word = line.words[0]
+                    # docTR retourne des coordonnées normalisées (0-1)
+                    block_bbox = first_word.geometry
+            
+            # Combine les lignes du bloc
+            block_text = " ".join(block_text_lines).strip()
+            
+            if not block_text:
                 continue
             
-            # Détecte les titres
-            if line.startswith('#'):
-                level = len(line) - len(line.lstrip('#'))
-                title = line.lstrip('#').strip()
-                blocks.append(ContentBlock(
-                    type="title",
-                    content=title,
-                    page_number=page_number,
-                    level=level
-                ))
+            # Crée le BoundingBox si disponible
+            bbox = None
+            if block_bbox is not None:
+                # Coordonnées normalisées docTR: [[x_min, y_min], [x_max, y_max]]
+                bbox = BoundingBox(
+                    x0=float(block_bbox[0][0]),
+                    y0=float(block_bbox[0][1]),
+                    x1=float(block_bbox[1][0]),
+                    y1=float(block_bbox[1][1]),
+                    page=page_number
+                )
             
-            # Détecte les tableaux (markdown tables)
-            elif '|' in line:
-                table_lines = [line]
-                i += 1
-                while i < len(lines) and '|' in lines[i]:
-                    table_lines.append(lines[i].strip())
-                    i += 1
-                
-                blocks.append(ContentBlock(
-                    type="table",
-                    content='\n'.join(table_lines),
-                    page_number=page_number
-                ))
-                continue
+            # Détecte le type de contenu
+            content_type, level = self._detect_content_type(block_text)
             
-            # Détecte les listes
-            elif re.match(r'^[\*\-\+]\s+', line) or re.match(r'^\d+\.\s+', line):
-                list_lines = [line]
-                i += 1
-                while i < len(lines):
-                    next_line = lines[i].strip()
-                    if re.match(r'^[\*\-\+]\s+', next_line) or re.match(r'^\d+\.\s+', next_line):
-                        list_lines.append(next_line)
-                        i += 1
-                    else:
-                        break
-                
-                blocks.append(ContentBlock(
-                    type="list",
-                    content='\n'.join(list_lines),
-                    page_number=page_number
-                ))
-                continue
-            
-            # Détecte le code
-            elif line.startswith('```'):
-                code_lines = []
-                i += 1
-                while i < len(lines) and not lines[i].strip().startswith('```'):
-                    code_lines.append(lines[i])
-                    i += 1
-                
-                blocks.append(ContentBlock(
-                    type="code",
-                    content='\n'.join(code_lines),
-                    page_number=page_number
-                ))
-            
-            # Texte normal
-            else:
-                # Accumule les paragraphes
-                paragraph_lines = [line]
-                i += 1
-                while i < len(lines):
-                    next_line = lines[i].strip()
-                    if (not next_line or 
-                        next_line.startswith('#') or 
-                        '|' in next_line or
-                        re.match(r'^[\*\-\+]\s+', next_line) or
-                        next_line.startswith('```')):
-                        break
-                    paragraph_lines.append(next_line)
-                    i += 1
-                
-                blocks.append(ContentBlock(
-                    type="text",
-                    content=' '.join(paragraph_lines),
-                    page_number=page_number
-                ))
-                continue
-            
-            i += 1
+            blocks.append(ContentBlock(
+                type=content_type,
+                content=block_text,
+                page_number=page_number,
+                bbox=bbox,
+                level=level if content_type == "title" else None
+            ))
         
         return blocks
+    
+    def _detect_content_type(self, text: str) -> tuple:
+        """
+        Détecte le type de contenu basé sur le texte
+        
+        Args:
+            text: Texte à analyser
+            
+        Returns:
+            Tuple (type, level) où type est "text", "title", "list", etc.
+        """
+        text_stripped = text.strip()
+        
+        # Détecte les titres (MAJUSCULES, court, ou commence par chiffre/lettre de section)
+        if len(text_stripped) < 100:
+            # Titre tout en majuscules
+            if text_stripped.isupper() and len(text_stripped.split()) <= 10:
+                return ("title", 1)
+            
+            # Commence par un numéro de section (1., 1.1, I., etc.)
+            if re.match(r'^(\d+\.|\d+\.\d+|[IVX]+\.)\s+', text_stripped):
+                return ("title", 2)
+        
+        # Détecte les listes
+        if re.match(r'^[\*\-\+•]\s+', text_stripped) or re.match(r'^\d+\.\s+', text_stripped):
+            return ("list", None)
+        
+        # Détecte les tableaux (présence de séparateurs multiples)
+        if text_stripped.count('|') >= 2 or text_stripped.count('\t') >= 2:
+            return ("table", None)
+        
+        # Par défaut, c'est du texte
+        return ("text", None)
     
     def batch_process_images(
         self, 
@@ -298,8 +274,58 @@ class ChandraOCRHandler:
         for i in range(0, len(images), batch_size):
             batch = images[i:i+batch_size]
             
+            # Prépare les images pour le batch
+            batch_images = []
+            batch_metadata = []
+            
             for image, page_num, img_id in batch:
-                blocks = self.process_image(image, page_num, image_id=img_id)
-                all_blocks.append(blocks)
+                img_array = np.array(image)
+                batch_images.append(img_array)
+                batch_metadata.append((page_num, img_id))
+            
+            try:
+                # Traite le batch entier
+                results = self.model(batch_images)
+                
+                # Parse chaque résultat
+                for result, (page_num, img_id) in zip(results.pages, batch_metadata):
+                    blocks = self._parse_doctr_result(
+                        type('Result', (), {'pages': [result]})(),  # Wrapper temporaire
+                        page_num,
+                        img_id
+                    )
+                    all_blocks.append(blocks)
+                    
+            except Exception as e:
+                print(f"Erreur lors du traitement du batch: {e}")
+                # Traite individuellement en cas d'erreur
+                for image, page_num, img_id in batch:
+                    blocks = self.process_image(image, page_num, image_id=img_id)
+                    all_blocks.append(blocks)
         
         return all_blocks
+    
+    def export_to_text(self, blocks: List[ContentBlock]) -> str:
+        """
+        Exporte les ContentBlocks en texte brut
+        
+        Args:
+            blocks: Liste de ContentBlocks
+            
+        Returns:
+            Texte formaté
+        """
+        text_lines = []
+        
+        for block in blocks:
+            if block.type == "title":
+                prefix = "#" * (block.level or 1)
+                text_lines.append(f"{prefix} {block.content}\n")
+            elif block.type == "list":
+                text_lines.append(f"• {block.content}")
+            else:
+                text_lines.append(block.content)
+            
+            text_lines.append("")  # Ligne vide entre blocs
+        
+        return "\n".join(text_lines)

@@ -1,3 +1,13 @@
+### **pdf_extractor.py**
+# - Coordonne l'extraction complète
+# - Utilise PyMuPDF pour extraction de base
+# - Détecte si le PDF est scanné ou a une mise en page complexe
+# - Délègue à ocr_handler.py si nécessaire
+# - Extrait les métadonnées
+# - Assemble le document final
+
+
+
 """
 Extracteur principal de PDF
 Coordonne l'extraction avec PyMuPDF et Chandra OCR
@@ -10,7 +20,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 import json
 
-from document_schemas import (
+from src.extraction.document_schemas import (
     ExtractedDocument, 
     PageContent, 
     ContentBlock, 
@@ -19,8 +29,8 @@ from document_schemas import (
     TOCEntry,
     ExtractionStats
 )
-from ocr_handler import DocTROCRHandler
-from preprocessor import TextPreprocessor
+from src.extraction.ocr_handler1 import ChandraOCRHandler
+from src.extraction.preprocessor import TextPreprocessor
 
 
 class PDFExtractor:
@@ -43,8 +53,8 @@ class PDFExtractor:
         
         # Configuration
         self.extract_images = self.config.get('pymupdf', {}).get('extract_images', True)
-        self.use_ocr_for_images = self.config.get('doctr', {}).get('use_for_images', True)
-        self.use_ocr_for_scanned = self.config.get('doctr', {}).get('use_for_scanned', True)
+        self.use_ocr_for_images = self.config.get('chandra', {}).get('use_for_images', True)
+        self.use_ocr_for_scanned = self.config.get('chandra', {}).get('use_for_scanned', True)
         self.output_dir = Path(self.config.get('output_dir', 'data/extracted'))
         self.temp_dir = Path(self.config.get('temp_dir', 'data/temp'))
         
@@ -55,12 +65,10 @@ class PDFExtractor:
     def _init_ocr_handler(self):
         """Initialise le handler OCR (lazy loading)"""
         if self.ocr_handler is None:
-            doctr_config = self.config.get('doctr', {})
-            self.ocr_handler = DocTROCRHandler(
-                det_arch=doctr_config.get('det_arch', 'db_resnet50'),
-                reco_arch=doctr_config.get('reco_arch', 'crnn_vgg16_bn'),
-                device=doctr_config.get('device', 'cuda'),
-                pretrained=doctr_config.get('pretrained', True)
+            chandra_config = self.config.get('chandra', {})
+            self.ocr_handler = ChandraOCRHandler(
+                model_name=chandra_config.get('model_name', 'datalab-to/chandra'),
+                device=chandra_config.get('device', 'cuda')
             )
     
     def extract_pdf(self, pdf_path: str) -> ExtractedDocument:
@@ -97,7 +105,7 @@ class PDFExtractor:
         # Détecte si le PDF est scanné
         is_scanned = self._is_scanned_pdf(pdf_doc)
         if is_scanned:
-            print("📸 PDF scanné détecté - utilisation de docTR")
+            print("📸 PDF scanné détecté - utilisation de Chandra")
             if self.use_ocr_for_scanned:
                 self._init_ocr_handler()
         
@@ -313,13 +321,13 @@ class PDFExtractor:
         return blocks
     
     def _extract_with_ocr(self, page, page_num: int) -> List[ContentBlock]:
-        """Extrait le contenu avec docTR OCR"""
+        """Extrait le contenu avec Chandra OCR"""
         # Convertit la page en image
         pix = page.get_pixmap(dpi=300)
         img_data = pix.tobytes("png")
         image = Image.open(io.BytesIO(img_data))
         
-        # Traite avec docTR
+        # Traite avec Chandra
         blocks = self.ocr_handler.process_page_image(image, page_num + 1)
         
         return blocks
@@ -354,7 +362,7 @@ class PDFExtractor:
             image_path = self.temp_dir / f"{image_id}.png"
             image.save(image_path)
             
-            # Génère une description avec docTR si activé
+            # Génère une description avec Chandra si activé
             description = ""
             if self.use_ocr_for_images and self.ocr_handler:
                 desc_block = self.ocr_handler.process_image_for_description(
@@ -423,17 +431,3 @@ class PDFExtractor:
         
         print(f"\n💾 Document sauvegardé: {output_file}")
         return str(output_file)
-    
-# Exemple
-if __name__ == "__main__":
-    config = {
-        "pymupdf": {"extract_images": True},
-        "doctr": {"use_for_images": True, "use_for_scanned": True},
-        "output_dir": "data/extracted",
-        "temp_dir": "data/temp"
-    }
-    extractor = PDFExtractor(
-       config=config
-    )
-    document = extractor.extract_pdf("data/raw/Rapport_de_stage_Fatou_Soumaya_WADE.pdf")
-    extractor.save_document(document)
