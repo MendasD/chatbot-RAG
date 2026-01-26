@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+
+        {% block title %}
+
+        {% endblock title%}
+
+    </title>
+    <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/> -->
+    <!-- <link rel="stylesheet" href="{% static 'css/main.css' %}" /> -->
+    <!-- <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script> Font Awesome Icons -->
+    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <link rel="stylesheet" href="{% static 'css/boilerplate.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/content.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/navbar.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/colors.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/footer.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/messages.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/home.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/search.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/publication.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/publication_form.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/collection.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/edit_profile.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/notifications.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/discussion.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/followers.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/tag.css' %}"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/> <!-- Google Inter Font -->
+</head>
+<body style="margin: 0;">
+
+{% include "navbar.html" %}
+
+ <!-- Affichage des messages d'erreur -->
+
+{% if messages %}
+<div class="toast-messages">
+    {% for message in messages %}
+    <div class="toast-message" data-timeout="3000">
+        <span>{{ message }}</span>
+        <button type="button" class="close-btn" aria-label="Close">&times;</button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="content">
+
+    {% block content %}
+
+    {% endblock content %}
+
+</div>
+
+{% include "footer.html" %}
+
+{% block js %}
+
+{% endblock js%}
+
+<script src="{% static 'js/script.js' %}"></script>
+
+<script>
+    $('.profile__container--favs__item--collections__collection .delete').on('click', function(e) {
+        const collectionId = $(this).attr('for');
+        
+        if (confirm('Are you sure you want to delete this collection ?')) {
+            window.location.href = `/delete-collection/${collectionId}/`;
+        }
+    });
+
+    $('.collection-item__delete').on('click', function(e) {
+        const collectionId = $(this).attr('for');
+        
+        if (confirm('Are you sure you want to delete this collection ?')) {
+            window.location.href = `/delete-collection/${collectionId}/`;
+        }
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.querySelector('.header__search--form__input');
+    const searchDropdown = document.getElementById('search-dropdown');
+    const form = document.querySelector('.header__search--form');
+
+    // Show the dropdown when the input is focused
+    searchInput.addEventListener('focus', () => {
+        searchDropdown.style.display = 'block';
+    });
+
+    // Hide the dropdown when a click occurs outside the search form
+    document.addEventListener('click', (event) => {
+        const isClickInsideForm = form.contains(event.target);
+        if (!isClickInsideForm) {
+            searchDropdown.style.display = 'none';
+        }
+    });
+
+    // Optional: Prevent the form from submitting when clicking inside the dropdown
+    searchDropdown.addEventListener('click', (event) => {
+        event.stopPropagation();
+    });
+});
+</script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script> -->
+</body>
+</html>
