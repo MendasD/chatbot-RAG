@@ -10,24 +10,20 @@ env_path = BASE_DIR / '.env'
 load_dotenv(env_path)
 
 load_dotenv()
-AWS_ACCESS_KEY_ID=os.getenv('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY=os.getenv('AWS_SECRET_ACCESS_KEY')
-region=os.getenv('region')
-bucket_name=os.getenv('bucket_name')
-
-# Mettre les clés AWS ici si pas lu dans le .env
-region="eu-north-1"
-bucket_name="noxapdfbucket"
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+region = os.getenv('region', 'eu-north-1')
+bucket_name = os.getenv('bucket_name', 'noxapdfbucket')
 
 # Debug
 print("=" * 60)
-print("🔍 AWS Service Configuration")
-print(f"📁 Loading .env from: {env_path}")
-print(f"✅ File exists: {env_path.exists()}")
-print(f"🔑 AWS_ACCESS_KEY_ID: {AWS_ACCESS_KEY_ID[:10] if AWS_ACCESS_KEY_ID else '❌ NOT FOUND'}...")
-print(f"🗝️ AWS_SECRET_ACCESS_KEY: {AWS_SECRET_ACCESS_KEY[:10] if AWS_SECRET_ACCESS_KEY else '❌ NOT FOUND'}...")
-print(f"🪣 Bucket name: {bucket_name if bucket_name else '❌ NOT FOUND'}")
-print(f"🌍 Region: {region if region else '❌ NOT FOUND'}")
+print("[DEBUG] AWS Service Configuration")
+print(f"[PATH] Loading .env from: {env_path}")
+print(f"[CHECK] File exists: {env_path.exists()}")
+print(f"[KEY] AWS_ACCESS_KEY_ID: {AWS_ACCESS_KEY_ID[:10] if AWS_ACCESS_KEY_ID else 'NOT FOUND'}...")
+print(f"[KEY] AWS_SECRET_ACCESS_KEY: {AWS_SECRET_ACCESS_KEY[:10] if AWS_SECRET_ACCESS_KEY else 'NOT FOUND'}...")
+print(f"[BUCKET] Bucket name: {bucket_name if bucket_name else 'NOT FOUND'}")
+print(f"[REGION] Region: {region if region else 'NOT FOUND'}")
 print("=" * 60)
 
 

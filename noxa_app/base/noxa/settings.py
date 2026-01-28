@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     #'noxa',
     'base.apps.BaseConfig',
-    'authentification.apps.AuthentificationConfig',
+    'chat.apps.ChatConfig',  # App Chatbot RAG
 ]
 
 MIDDLEWARE = [
@@ -123,14 +123,14 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
-    
 ]
 
 # Define the user model
-AUTH_USER_MODEL = 'authentification.User'
+AUTH_USER_MODEL = 'auth.User'
 
 # Login URL
 LOGIN_URL = '/login/'

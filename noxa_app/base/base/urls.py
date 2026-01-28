@@ -1,4 +1,5 @@
 from django.urls import path
+from django.contrib.auth.views import LoginView, LogoutView
 from . import views
 
 app_name = 'base'
@@ -41,6 +42,6 @@ urlpatterns = [
     path('subjects/<int:pk>/add-correction/', views.add_correction, name='add-correction'),
     path("correction/<int:pk>/like/", views.like_correction, name="like-correction"),
     path("correction/<int:pk>/comment/", views.add_comment, name="add-comment"),
-
-
+    path('login/', LoginView.as_view(template_name='base/login.html'), name='login'),
+    path('logout/', LogoutView.as_view(next_page='/'), name='logout'),
 ]

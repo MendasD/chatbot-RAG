@@ -216,7 +216,7 @@ aside .sd-card {
           {% if request.user.is_authenticated %}
             <button id="topAddCorrectionBtn" class="sd-add-btn">+ Propose correction</button>
           {% else %}
-            <a href="{% url 'authentification:login' %}" class="sd-add-btn">Login to propose</a>
+            <a href="{% url 'base:login' %}" class="sd-add-btn">Login to propose</a>
           {% endif %}
         </div>
       </div>

@@ -1,0 +1,226 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}NOXA Chat - Assistant Académique{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/chat.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <!-- Sidebar avec historique des conversations -->
+    <aside class="chat-sidebar">
+        <div class="sidebar-header">
+            <!-- BOUTON RETOUR À L'ACCUEIL -->
+            <a href="{% url 'base:home' %}" class="back-home-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Retour à l'accueil
+            </a>
+
+            <h2>NOXA Chat</h2>
+            <button class="new-chat-btn" id="newChatBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Nouvelle conversation
+            </button>
+        </div>
+
+        <!-- Filtre par topic -->
+        <div class="topic-filter">
+            <select id="topicFilter">
+                <option value="">Tous les topics</option>
+                {% for topic in topics %}
+                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id == topic.id %}selected{% endif %}>
+                    {{ topic.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Liste des conversations -->
+        <div class="conversations-list" id="conversationsList">
+            {% for conv in conversations %}
+            <a href="{% url 'chat:conversation' conv.id %}"
+               class="conversation-item {% if active_conversation and active_conversation.id == conv.id %}active{% endif %}"
+               data-id="{{ conv.id }}">
+                <div class="conv-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                </div>
+                <div class="conv-info">
+                    <span class="conv-title">{{ conv.title|truncatechars:30 }}</span>
+                    <span class="conv-date">{{ conv.updated_at|date:"d/m/Y H:i" }}</span>
+                </div>
+                <button class="delete-conv-btn" data-id="{{ conv.id }}" title="Supprimer">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3,6 5,6 21,6"></polyline>
+                        <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"></path>
+                    </svg>
+                </button>
+            </a>
+            {% empty %}
+            <p class="no-conversations">Aucune conversation</p>
+            {% endfor %}
+        </div>
+    </aside>
+
+    <!-- Zone principale de chat -->
+    <main class="chat-main">
+        {% if active_conversation %}
+        <!-- En-tête de la conversation -->
+        <header class="chat-header">
+            <div class="chat-header-info">
+                <h3 id="conversationTitle">{{ active_conversation.title }}</h3>
+                {% if active_conversation.topic %}
+                <span class="topic-badge">{{ active_conversation.topic.name }}</span>
+                {% endif %}
+            </div>
+        </header>
+        {% endif %}
+
+        {% if active_conversation and chat_messages %}
+        <!-- Zone des messages avec historique -->
+        <div class="messages-container" id="messagesContainer">
+            {% for message in chat_messages %}
+            <div class="message message-{{ message.role }}" data-id="{{ message.id }}">
+                <div class="message-avatar">
+                    {% if message.role == 'user' %}
+                    <div class="avatar-user">{{ request.user.username|slice:":1"|upper }}</div>
+                    {% else %}
+                    <div class="avatar-assistant">N</div>
+                    {% endif %}
+                </div>
+                <div class="message-content">
+                    <div class="message-text">{{ message.content|linebreaks }}</div>
+
+                    {% if message.role == 'assistant' %}
+                    <!-- Sources -->
+                    {% if message.sources.all %}
+                    <div class="message-sources">
+                        <button class="sources-toggle">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                            {{ message.sources.count }} source{{ message.sources.count|pluralize }}
+                        </button>
+                        <div class="sources-list" style="display: none;">
+                            {% for source in message.sources.all %}
+                            <a href="{% url 'base:publication' source.publication.id %}" class="source-item" target="_blank">
+                                <strong>{{ source.publication.theme|truncatechars:50 }}</strong>
+                                {% if source.page_number %}
+                                <span class="source-page">Page {{ source.page_number }}</span>
+                                {% endif %}
+                                <span class="source-score">{{ source.relevance_score|floatformat:0 }}%</span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Feedback -->
+                    <div class="message-feedback">
+                        <button class="feedback-btn {% if message.is_helpful == True %}active{% endif %}"
+                                data-type="helpful" data-id="{{ message.id }}" title="Utile">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                            </svg>
+                        </button>
+                        <button class="feedback-btn {% if message.is_helpful == False %}active{% endif %}"
+                                data-type="not-helpful" data-id="{{ message.id }}" title="Pas utile">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Zone des messages vide (pour nouvelles conversations) -->
+        <div class="messages-container" id="messagesContainer" style="display: none;"></div>
+
+        <!-- État initial - Écran de bienvenue avec logo -->
+        <div class="chat-welcome" id="chatWelcome">
+            <div class="welcome-icon">
+                <img src="{% static 'images/logo.svg' %}" alt="NOXA" class="noxa-logo-img" style="width: 80px; height: 80px;">
+            </div>
+            <h2>Bienvenue sur NOXA Chat</h2>
+            <p>Votre assistant intelligent pour explorer les mémoires et rapports académiques</p>
+        </div>
+        {% endif %}
+
+        <!-- Zone de saisie -->
+        <div class="chat-input-container">
+            <form id="chatForm" class="chat-form">
+                <div class="input-wrapper">
+                    <textarea
+                        id="messageInput"
+                        placeholder="Posez votre question sur les mémoires académiques..."
+                        rows="1"
+                        maxlength="2000"
+                    ></textarea>
+                    <button type="submit" id="sendBtn" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+                <div class="input-info">
+                    <span id="charCount">0 / 2000</span>
+                    <span class="typing-indicator" id="typingIndicator" style="display: none;">
+                        NOXA réfléchit<span class="dots"><span>.</span><span>.</span><span>.</span></span>
+                    </span>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+
+<!-- Modal de confirmation de suppression -->
+<div class="delete-modal" id="deleteModal">
+    <div class="delete-modal-content">
+        <div class="delete-modal-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <polyline points="3,6 5,6 21,6"></polyline>
+                <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+        </div>
+        <h3>Supprimer la conversation ?</h3>
+        <p>Cette action est irréversible. Tous les messages seront perdus.</p>
+        <div class="delete-modal-actions">
+            <button class="btn-cancel" id="cancelDelete">Annuler</button>
+            <button class="btn-delete" id="confirmDelete">Supprimer</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Configuration
+    const CONFIG = {
+        conversationId: {{ active_conversation.id|default:'null' }},
+        csrfToken: '{{ csrf_token }}',
+        urls: {
+            createConversation: '{% url "chat:create_conversation" %}',
+            sendMessage: {% if active_conversation %}'{% url "chat:send_message" active_conversation.id %}'{% else %}null{% endif %},
+            deleteConversation: '{% url "chat:delete_conversation" 0 %}'.replace('/0/', '/{id}/'),
+            submitFeedback: '{% url "chat:submit_feedback" 0 %}'.replace('/0/', '/{id}/'),
+        }
+    };
+</script>
+<script src="{% static 'js/chat.js' %}"></script>
+{% endblock %}

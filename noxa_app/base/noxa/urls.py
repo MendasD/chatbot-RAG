@@ -7,7 +7,7 @@ from django.conf import settings
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('base.urls', namespace='base')),
-    path('', include('authentification.urls', namespace='authentification')),
+    path('chat/', include('chat.urls', namespace='chat')),  # Chatbot RAG
 ]
 
 if settings.DEBUG:

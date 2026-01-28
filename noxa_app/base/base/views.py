@@ -105,7 +105,9 @@ def home(request):
         )
         # collections = request.user.collection_set.all()
 
-        favorite_topics = request.user.favorite_topics.all()
+        favorite_topics = getattr(request.user, 'favorite_topics', None)
+        if favorite_topics is not None:
+            favorite_topics = favorite_topics.all()
     else:
         collections = None
         favorite_topics = None
@@ -132,7 +134,9 @@ def search(request, tab=None):
         )
         # collections = request.user.collection_set.all()
 
-        favorite_topics = request.user.favorite_topics.all()
+        favorite_topics = getattr(request.user, 'favorite_topics', None)
+        if favorite_topics is not None:
+            favorite_topics = favorite_topics.all()
     else:
         collections = None
         favorite_topics = None
@@ -618,16 +622,28 @@ def userProfile(request, pk: str):
     # Notifications (only visible for the request.user)
     notifications = []
     if request.user == user:
-        notifications = request.user.notifications.filter(is_deleted=False, is_read=False)[:4]
+        user_notifications = getattr(request.user, 'notifications', None)
+        if user_notifications is not None:
+            notifications = user_notifications.filter(is_deleted=False, is_read=False)[:4]
 
     # Follower and following lists (restricted to 10 each, will refer to a more page on which they will all be)
-    following_user = request.user.following.filter(id=user.id).exists()
+    # Safe access to following relationship (may not exist on all User models)
+    user_following = getattr(request.user, 'following', None)
+    if user_following is not None:
+        following_user = user_following.filter(id=user.id).exists()
+    else:
+        following_user = False
 
-    followers = user.followers.all()[:3]
-    followings = user.following.all()[:3]
+    # Safe access to followers/following for the profile user
+    user_followers = getattr(user, 'followers', None)
+    user_followings = getattr(user, 'following', None)
 
-    followers_count = user.get_followers_count()
-    followings_count = user.get_following_count()
+    followers = user_followers.all()[:3] if user_followers is not None else []
+    followings = user_followings.all()[:3] if user_followings is not None else []
+
+    # Safe access to count methods
+    followers_count = user.get_followers_count() if hasattr(user, 'get_followers_count') else 0
+    followings_count = user.get_following_count() if hasattr(user, 'get_following_count') else 0
 
     # Track search click if coming from search
     track_search_click(request, user)
@@ -811,13 +827,18 @@ def followUser(request, pk: str):
         messages.error(request, "You cannot follow yourself")
         return redirect('base:user-profile', pk)
     
-    # Check if already following
-    if request.user.following.filter(id=user_to_follow.id).exists():
+    # Check if already following (safe access to following relationship)
+    user_following = getattr(request.user, 'following', None)
+    if user_following is None:
+        messages.error(request, "Following feature is not available")
+        return redirect('base:user-profile', pk)
+
+    if user_following.filter(id=user_to_follow.id).exists():
         messages.info(request, f"You are already following {user_to_follow.username}")
     else:
-        request.user.following.add(user_to_follow)
+        user_following.add(user_to_follow)
         messages.success(request, f"You are now following {user_to_follow.username}")
-        
+
         # Create notification
         utils.NotificationManager.new_follower(request.user, user_to_follow)
     
@@ -839,13 +860,19 @@ def unfollowUser(request, pk: str):
 
     User = get_user_model()
     user_to_unfollow = get_object_or_404(User, id=pk)
-    
-    if request.user.following.filter(id=user_to_unfollow.id).exists():
-        request.user.following.remove(user_to_unfollow)
+
+    # Safe access to following relationship
+    user_following = getattr(request.user, 'following', None)
+    if user_following is None:
+        messages.error(request, "Following feature is not available")
+        return redirect('base:user-profile', pk)
+
+    if user_following.filter(id=user_to_unfollow.id).exists():
+        user_following.remove(user_to_unfollow)
         messages.success(request, f"You have unfollowed {user_to_unfollow.username}")
     else:
         messages.info(request, f"You are not following {user_to_unfollow.username}")
-    
+
     return redirect('base:user-profile', pk)
 
 
@@ -853,10 +880,11 @@ def followers(request, pk: str):
     User = get_user_model()
     user = get_object_or_404(User, id=pk)
 
-    followers = user.followers.all()
-    # followings = user.following.all()
+    # Safe access to followers relationship
+    user_followers = getattr(user, 'followers', None)
+    followers = user_followers.all() if user_followers is not None else []
 
-    followers_count = user.get_followers_count()
+    followers_count = user.get_followers_count() if hasattr(user, 'get_followers_count') else 0
 
     context = {'user': user, 'followers': followers, 'followers_count': followers_count}
 
@@ -867,10 +895,11 @@ def followings(request, pk: str):
     User = get_user_model()
     user = get_object_or_404(User, id=pk)
 
-    followings = user.following.all()
-    # followings = user.following.all()
+    # Safe access to following relationship
+    user_following = getattr(user, 'following', None)
+    followings = user_following.all() if user_following is not None else []
 
-    followings_count = user.get_following_count()
+    followings_count = user.get_following_count() if hasattr(user, 'get_following_count') else 0
 
     context = {'user': user, 'followings': followings, 'followings_count': followings_count}
 
@@ -1043,35 +1072,47 @@ def addTopicToFav(request, pk: str):
     """
 
     topic = get_object_or_404(Topic, id=pk)
-    
+
+    # Check if favorite_topics feature is available
+    favorite_topics = getattr(request.user, 'favorite_topics', None)
+    if favorite_topics is None:
+        messages.error(request, 'Cette fonctionnalité n\'est pas encore disponible')
+        return redirect(request.META.get('HTTP_REFERER', 'base:home'))
+
     # Check if already in favorites
-    if request.user.favorite_topics.filter(id=topic.id).exists():
+    if favorite_topics.filter(id=topic.id).exists():
         # remove topic from favorites
-        request.user.favorite_topics.remove(topic)
+        favorite_topics.remove(topic)
         messages.success(request, f'"{topic.name}" removed from your favorites')
     else:
         # Add topic to favorites
-        request.user.favorite_topics.add(topic)
+        favorite_topics.add(topic)
         messages.success(request, f'"{topic.name}" added to your favorites')
-    
+
     return redirect(request.META.get('HTTP_REFERER', 'base:home'))
 
 @login_required
 def removeTopicFromFav(request, pk: str):
     """
     Remove a topic from user's favorites.
-    
+
     Args:
         request: HTTP request object
         pk (str): Topic ID to remove from favorites
-        
+
     Returns:
         HttpResponse: Redirect to referring page with status message
     """
 
     topic = get_object_or_404(Topic, id=pk)
-    
-    request.user.favorite_topics.remove(topic)
+
+    # Check if favorite_topics feature is available
+    favorite_topics = getattr(request.user, 'favorite_topics', None)
+    if favorite_topics is None:
+        messages.error(request, 'Cette fonctionnalité n\'est pas encore disponible')
+        return redirect(request.META.get('HTTP_REFERER', 'base:home'))
+
+    favorite_topics.remove(topic)
     messages.success(request, f'"{topic.name}" removed from your favorites')
     
     return redirect(request.META.get('HTTP_REFERER', 'base:home'))
@@ -1120,10 +1161,15 @@ def notificationsPage(request):
         HttpResponse: Rendered notifications template with last 50 notifications
     """
 
-    notifications = request.user.notifications.filter(
-        is_deleted=False
-    ).order_by('-created')[:50]  # Show last 50 notifications
-    
+    # Safe access to notifications relationship
+    user_notifications = getattr(request.user, 'notifications', None)
+    if user_notifications is not None:
+        notifications = user_notifications.filter(
+            is_deleted=False
+        ).order_by('-created')[:50]  # Show last 50 notifications
+    else:
+        notifications = []
+
     context = {
         'notifications': notifications
     }
