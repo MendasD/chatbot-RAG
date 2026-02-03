@@ -200,6 +200,8 @@ class NoxaChat {
     }
 
     getFileIcon(type) {
+        if (!type || typeof type !== 'string') return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>';
+
         if (type.startsWith('image/')) return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
         if (type.startsWith('audio/')) return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
         if (type.startsWith('video/')) return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>';
@@ -324,7 +326,7 @@ class NoxaChat {
         return await response.json();
     }
 
-    addMessageToUI(role, content, file = null) {
+    addMessageToUI(role, content, files = null) {
         // Masquer l'écran de bienvenue
         if (this.elements.chatWelcome) {
             this.elements.chatWelcome.style.display = 'none';
@@ -342,16 +344,21 @@ class NoxaChat {
             container.className = 'messages-container';
             container.id = 'messagesContainer';
 
-            main.insertBefore(container, inputContainer);
+            if (main && inputContainer) {
+                main.insertBefore(container, inputContainer);
+            } else if (main) {
+                main.appendChild(container);
+            }
             this.elements.messagesContainer = container;
         }
 
         const messageDiv = document.createElement('div');
         messageDiv.className = `message message-${role}`;
 
-        let fileHTML = '';
-        if (file) {
-            fileHTML = `
+        let filesHTML = '';
+        if (files) {
+            const filesArray = Array.isArray(files) ? files : [files];
+            filesHTML = filesArray.map(file => `
                 <div class="message-file">
                     <div class="file-icon">${this.getFileIcon(file.type)}</div>
                     <div class="file-info">
@@ -359,15 +366,17 @@ class NoxaChat {
                         <span class="file-size">${this.formatFileSize(file.size)}</span>
                     </div>
                 </div>
-            `;
+            `).join('');
         }
+
+        const initial = role === 'user' ? 'U' : 'N';
 
         messageDiv.innerHTML = `
             <div class="message-avatar">
                 <div class="avatar-${role}">${initial}</div>
             </div>
             <div class="message-content">
-                ${fileHTML}
+                ${filesHTML}
                 <div class="message-text">${this.formatMessage(content)}</div>
             </div>
         `;
