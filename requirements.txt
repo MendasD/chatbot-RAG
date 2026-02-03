@@ -14,3 +14,4 @@ python-dotenv==1.1.1 # Fixed version to resolve chandra-ocr conflict
 pyyaml==6.0.1
 torch
 transformers
+boto3
