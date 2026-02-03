@@ -63,7 +63,7 @@ class TOCEntry:
 class DocumentMetadata:
     """Métadonnées du document"""
     title: Optional[str] = None
-    author: Optional[str] = None
+    author: List[str] = field(default_factory=list) #Optional[str] = None
     subject: Optional[str] = None
     keywords: List[str] = field(default_factory=list)
     creation_date: Optional[str] = None
@@ -71,7 +71,7 @@ class DocumentMetadata:
     num_pages: int = 0
     language: Optional[str] = None
     producer: Optional[str] = None
-    file_size: Optional[int] = None
+    file_size: Optional[int] = None # en Mo
 
 
 @dataclass

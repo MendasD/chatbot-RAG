@@ -5,6 +5,8 @@
 # - Génère du markdown/HTML/JSON avec mise en page
 # - Parse le résultat pour structurer les données
 
+# PLUS UTILISE
+
 """
 Gestionnaire OCR avec le modèle Chandra
 Traite les images et pages scannées pour extraire le contenu structuré

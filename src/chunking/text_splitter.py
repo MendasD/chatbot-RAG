@@ -342,7 +342,7 @@ class SmartTextSplitter:
         """Helper pour créer un DocumentChunk"""
         metadata = {
             'document_title': doc.metadata.title,
-            'document_author': doc.metadata.author
+            'document_author': ", ".join(doc.metadata.author) if doc.metadata.author else None,
         }
         if extra_metadata:
             metadata.update(extra_metadata)
