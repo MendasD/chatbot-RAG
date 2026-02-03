@@ -18,4 +18,5 @@ boto3
 gunicorn
 whitenoise
 psycopg2-binary
-dj-database-url
+dj-database-urlopenai
+sentence-transformers

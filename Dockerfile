@@ -31,5 +31,6 @@ COPY . /app/
 EXPOSE ${PORT}
 
 # Run migrations and start the application using gunicorn
-CMD python noxa_app/base/manage.py collectstatic --noinput && \
+CMD python noxa_app/base/manage.py migrate --noinput && \
+    python noxa_app/base/manage.py collectstatic --noinput && \
     gunicorn --bind 0.0.0.0:${PORT} noxa.wsgi:application
