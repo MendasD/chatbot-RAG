@@ -47,7 +47,7 @@ class PageContent:
     page_text: str  # Texte brut complet de la page
     has_images: bool = False
     has_tables: bool = False
-    extraction_method: str = "pymupdf"  # ou "chandra"
+    extraction_method: str = "pymupdf"  # ou "ocr"
     confidence_score: Optional[float] = None
 
 

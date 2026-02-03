@@ -216,7 +216,7 @@ class ChunkOptimizer:
         result = []
         
         for chunk in chunks:
-            if chunk.char_count <= self.max_chunk_size:
+            if chunk.char_count <= self.max_chunk_size or chunk.metadata.get('has_formulas'):
                 result.append(chunk)
             else:
                 # Redécoupe ce chunk
@@ -285,6 +285,33 @@ class ChunkOptimizer:
         # Combine les métadonnées
         merged_metadata = chunks[0].metadata.copy()
         merged_metadata['merged_from'] = [c.chunk_id for c in chunks]
+
+        # Fusionne les listes d'images et de formules
+        image_ids = []
+        image_paths = []
+        images = []
+        formulas = []
+        has_images = False
+        has_formulas = False
+
+        for c in chunks:
+            meta = c.metadata or {}
+            image_ids.extend(meta.get('image_ids', []))
+            image_paths.extend(meta.get('image_paths', []))
+            images.extend(meta.get('images', []))
+            formulas.extend(meta.get('formulas', []))
+            if meta.get('has_images'):
+                has_images = True
+            if meta.get('has_formulas'):
+                has_formulas = True
+
+        # Déduplique simplement par valeur
+        merged_metadata['image_ids'] = list(dict.fromkeys(image_ids))
+        merged_metadata['image_paths'] = list(dict.fromkeys(image_paths))
+        merged_metadata['images'] = images
+        merged_metadata['formulas'] = formulas
+        merged_metadata['has_images'] = has_images
+        merged_metadata['has_formulas'] = has_formulas
         
         return DocumentChunk(
             chunk_id=chunks[0].chunk_id,

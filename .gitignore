@@ -23,6 +23,7 @@ db.sqlite3
 *.tmp
 *.swp
 *~
+temp/
 # Ignorer les fichiers statiques collectés
 staticfiles/
 
