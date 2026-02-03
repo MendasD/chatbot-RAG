@@ -31,4 +31,4 @@ COPY . /app/
 EXPOSE ${PORT}
 
 # Run the application using the PORT variable
-CMD python noxa_app/base/manage.py runserver 0.0.0.0:${PORT}
+CMD python noxa_app/base/manage.py migrate && python noxa_app/base/manage.py runserver 0.0.0.0:${PORT}
