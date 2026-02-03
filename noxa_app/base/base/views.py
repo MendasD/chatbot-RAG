@@ -117,6 +117,91 @@ def home(request):
     return render(request, "base/home.html", context)
 
 
+def signup(request):
+    """
+    Handle user registration for the Noxa application.
+    """
+    if request.method == 'POST':
+        try:
+            username = request.POST.get('username', '').strip()
+            first_name = request.POST.get('first_name', '').strip()
+            last_name = request.POST.get('last_name', '').strip()
+            email = request.POST.get('email', '').strip()
+            password = request.POST.get('password', '')
+            password_confirm = request.POST.get('password_confirm', '')
+            photo = request.FILES.get('photo')
+            linkedin = request.POST.get('linkedin', '').strip()
+            github = request.POST.get('github', '').strip()
+            bio = request.POST.get('bio', '').strip()
+            school = request.POST.get('school', '').strip()
+
+            # Validation
+            if not username:
+                messages.error(request, 'Le nom d\'utilisateur est requis.')
+                return redirect('base:signup')
+
+            if not email:
+                messages.error(request, 'L\'adresse e-mail est requise.')
+                return redirect('base:signup')
+
+            if not password:
+                messages.error(request, 'Le mot de passe est requis.')
+                return redirect('base:signup')
+
+            if password != password_confirm:
+                messages.error(request, 'Les mots de passe ne correspondent pas.')
+                return redirect('base:signup')
+
+            if len(password) < 6:
+                messages.error(request, 'Le mot de passe doit contenir au moins 8 caractères.')
+                return redirect('base:signup')
+
+            User = get_user_model()
+
+            if User.objects.filter(username=username).exists():
+                messages.error(request, 'Le nom d\'utilisateur existe déjà.')
+                return redirect('base:signup')
+
+            if User.objects.filter(email=email).exists():
+                messages.error(request, 'L\'adresse e-mail est déjà utilisée.')
+                return redirect('base:signup')
+
+            # Créer l'utilisateur
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                bio=bio,
+                linkedin=linkedin,
+                github=github,
+                school=school
+            )
+
+            if photo:
+                print(f"DEBUG: Photo reçue: {photo}")
+                print(f"DEBUG: Nom du fichier: {photo.name}")
+                user.photo = photo
+                user.save()
+                print(f"DEBUG: Photo sauvegardée. user.photo.name = {user.photo.name}")
+            else:
+                print("DEBUG: Aucune photo reçue")
+
+            messages.success(request, 'Inscription réussie ! Vous pouvez maintenant vous connecter.')
+            return redirect('base:login')
+
+        except Exception as e:
+            print(f"Erreur lors de l'inscription : {str(e)}")
+            messages.error(request, f'Une erreur s\'est produite : {str(e)}')
+            return redirect('base:signup')
+        except Exception as e:
+            messages.error(request, f'Erreur lors de l\'inscription : {e}')
+            return redirect('base:signup')
+    
+    return render(request, "base/signup_new.html")
+
+
 ##############################################################################################
 ################################## SEARCH FUNCTIONALITY ######################################
 ##############################################################################################
@@ -306,6 +391,7 @@ def publication(request, pk: str):
     discussions = pub.discussion_set.all()
 
     # Track search click if coming from search
+    # save the search history if is coming from search
     track_search_click(request, pub)
 
     context = {'pub': pub, 'similar_pubs': similar_pubs, "collections": collections, 
@@ -1660,6 +1746,3 @@ def add_comment(request, pk):
             return JsonResponse({"error": str(e)}, status=400)
 
     return redirect(request.META.get("HTTP_REFERER", "/"))
-
-
-

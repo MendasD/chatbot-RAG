@@ -678,24 +678,13 @@ body .footer {
    ============================================ */
 .chat-welcome {
     flex: 1;
-    display: none;
+    display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 48px 24px;
     text-align: center;
     background: var(--bg-white);
-    animation: fadeIn 0.6s ease-out;
-}
-
-/* Afficher le welcome si le messages-container est vide */
-.messages-container:empty ~ .chat-welcome {
-    display: flex !important;
-}
-
-/* Masquer le welcome si des messages existent */
-.messages-container:has(.message) ~ .chat-welcome {
-    display: none !important;
 }
 
 .welcome-icon {
@@ -857,7 +846,6 @@ body .footer {
 
 #sendBtn:not(:disabled):active {
     transform: translateY(0);
-}
     transform: scale(1.08);
     box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
 }
@@ -924,17 +912,12 @@ body .footer {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
 }
 
 .modal-content {
@@ -943,18 +926,6 @@ body .footer {
     width: 90%;
     max-width: 480px;
     box-shadow: var(--shadow-lg);
-    animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
 }
 
 .modal-header {
@@ -1214,4 +1185,100 @@ body .footer {
         font-size: 13px;
         padding: 12px 16px;
     }
+}
+
+/* ============================================
+   MODAL DE SUPPRESSION
+   ============================================ */
+.delete-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.delete-modal.show {
+    display: flex;
+}
+
+.delete-modal-content {
+    background: var(--bg-white);
+    border-radius: 16px;
+    padding: 32px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.delete-modal-icon {
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.delete-modal-icon svg {
+    color: var(--danger);
+}
+
+.delete-modal-content h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.delete-modal-content p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.delete-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.delete-modal-actions .btn-cancel,
+.delete-modal-actions .btn-delete {
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.delete-modal-actions .btn-cancel {
+    background: var(--surface);
+    color: var(--text-primary);
+}
+
+.delete-modal-actions .btn-cancel:hover {
+    background: var(--surface-hover);
+}
+
+.delete-modal-actions .btn-delete {
+    background: var(--danger);
+    color: white;
+}
+
+.delete-modal-actions .btn-delete:hover {
+    background: #DC2626;
 }

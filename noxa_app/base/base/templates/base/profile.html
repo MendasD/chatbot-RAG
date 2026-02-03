@@ -67,6 +67,8 @@ JavaScript Dependencies:
 
 {% load user_extras %}
 
+{% load photo_filters %}
+
 {% block title %}
 
 Noxa - Profile page - {{ user.username }}
@@ -152,7 +154,11 @@ Noxa - Profile page - {{ user.username }}
             <!-- Account Info -->
             <div class="profile__container--main__info--profile">
                 <div class="profile__container--main__info--profile__avatar avatar--medium active">
-                    <img src="{{ user.photo.url }}"/>
+                    {% if user.photo %}
+                        <img src="{{ user.photo.url }}"/>
+                    {% else %}
+                        <img src="{% static 'images/avatar.svg' %}" alt="Avatar par défaut"/>
+                    {% endif %}
                 </div>
                 <p>@{{ user.username }}</p>
             </div>

@@ -2,11 +2,22 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from . import utils
-
 from PyPDF2 import PdfReader
 
+
+class CustomUser(AbstractUser):
+    """Modèle User custom avec champs supplémentaires"""
+    bio = models.TextField(blank=True, null=True)
+    photo = models.ImageField(upload_to='profils/', blank=True, null=True)
+    linkedin = models.URLField(blank=True, null=True)
+    github = models.URLField(blank=True, null=True)
+    school = models.CharField(max_length=50, default='ENSAE Dakar', blank=True, null=True)
+
+    def __str__(self):
+        return self.username
 
 
 class Topic(models.Model):

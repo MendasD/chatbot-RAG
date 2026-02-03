@@ -126,11 +126,11 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
-    BASE_DIR / 'static',
+    BASE_DIR / 'Static',
 ]
 
 # Define the user model
-AUTH_USER_MODEL = 'auth.User'
+AUTH_USER_MODEL = 'base.CustomUser' # 'auth.User' by default
 
 # Login URL
 LOGIN_URL = '/login/'

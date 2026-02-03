@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Connexion - NOXA</title>
+    <title>Inscription - NOXA</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <style>
         * {
@@ -172,7 +172,7 @@
 
         <div class="login-header">
             <div class="login-logo">NOXA</div>
-            <p class="login-subtitle">Connectez-vous pour accéder à votre espace</p>
+            <p class="login-subtitle">Inscrivez-vous pour profiter de toutes les fonctionnalités</p>
         </div>
 
         {% if form.errors %}
@@ -188,8 +188,24 @@
         </div>
         {% endif %}
 
-        <form method="post" class="login-form">
+        <form method="post" action="" class="login-form" enctype="multipart/form-data">
             {% csrf_token %}
+
+            <!-- Photo field -->
+            <div class="form-group">
+                <label for="id_photo">Photo de profil</label>
+                <input type="file" name="photo" id="id_photo" accept="image/*">
+            </div>
+
+            <div class="form-group">
+                <label for="id_name">Nom </label>
+                <input type="text" name="name" id="id_name" placeholder="Entrez votre nom d'utilisateur" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="id_first_name">Prénom</label>
+                <input type="text" name="first_name" id="id_first_name" placeholder="Entrez votre prénom"  autofocus>
+            </div>
 
             <div class="form-group">
                 <label for="id_username">Nom d'utilisateur</label>
@@ -197,15 +213,37 @@
             </div>
 
             <div class="form-group">
+                <label for="id_email">Adresse e-mail</label>
+                <input type="email" name="email" id="id_email" placeholder="Entrez votre adresse e-mail" >
+            </div>
+
+            <div class="form-group">
                 <label for="id_password">Mot de passe</label>
                 <input type="password" name="password" id="id_password" placeholder="Entrez votre mot de passe" required>
             </div>
 
-            <button type="submit" class="login-btn">Se connecter</button>
+            <!-- Partie des réseaux (linkedin et github)-->
+            <div class="form-group">
+                <label for="id_linkedin">Profil LinkedIn</label>
+                <input type="url" name="linkedin" id="id_linkedin" placeholder="Entrez l'URL de votre profil LinkedIn" >
+            </div>
+
+            <div class="form-group">
+                <label for="id_github">Profil GitHub</label>
+                <input type="url" name="github" id="id_github" placeholder="Entrez l'URL de votre profil GitHub" >
+            </div>
+
+             <!-- Brève description de l'individu-->
+            <div class="form-group">
+                <label for="id_bio">Brève description</label>
+                <input type="text"  name="bio" id="id_bio" placeholder="Parlez-nous un peu de vous" >
+            </div>
+
+            <button type="submit" class="login-btn">S'inscrire</button>
         </form>
 
         <div class="login-footer">
-            <p>Pas encore de compte ? <a href="{% url 'base:signup' %}">Créer un compte</a></p>
+            <p>Déjà un compte ? <a href="{% url 'base:login' %}">Se connecter</a></p>
         </div>
     </div>
 </body>

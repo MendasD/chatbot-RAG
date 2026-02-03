@@ -1,4 +1,3 @@
-
 from django.contrib import admin
 from django.urls import include, path
 from django.conf.urls.static import static
@@ -11,5 +10,11 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+else:
+    # Servir aussi les statiques en développement avec DEBUG = False
+    # A retirer en production avec un vrai serveur de fichiers statiques
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

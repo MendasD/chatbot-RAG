@@ -846,7 +846,7 @@ body .footer {
 
 #sendBtn:not(:disabled):active {
     transform: translateY(0);
-}
+/*}*/
     transform: scale(1.08);
     box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
 }

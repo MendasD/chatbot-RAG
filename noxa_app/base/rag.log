@@ -91,3 +91,78 @@ Recherche vectorielle: top_k=5, topic_filter=None
 0 chunks récupérés en 3.50ms
 API key OpenAI non configurée, utilisation du mode démo
 Réponse générée en 0.27ms
+sentence-transformers non installé, utilisation du mode mock
+Embedding généré en 22.25ms
+Recherche vectorielle: top_k=5, topic_filter=None
+0 chunks récupérés en 2.86ms
+API key OpenAI non configurée, utilisation du mode démo
+Réponse générée en 0.08ms
+Embedding généré en 0.11ms
+Recherche vectorielle: top_k=5, topic_filter=None
+0 chunks récupérés en 1.59ms
+API key OpenAI non configurée, utilisation du mode démo
+Réponse générée en 0.09ms
+Embedding généré en 0.10ms
+Recherche vectorielle: top_k=5, topic_filter=None
+0 chunks récupérés en 1.34ms
+API key OpenAI non configurée, utilisation du mode démo
+Réponse générée en 0.07ms
+Embedding généré en 0.30ms
+Recherche vectorielle: top_k=5, topic_filter=None
+0 chunks récupérés en 3.29ms
+API key OpenAI non configurée, utilisation du mode démo
+Réponse générée en 0.16ms
+sentence-transformers non installé, utilisation du mode mock
+Embedding généré en 1.37ms
+Recherche vectorielle: top_k=5, topic_filter=None
+0 chunks récupérés en 1.39ms
+API key OpenAI non configurée, utilisation du mode démo
+Réponse générée en 0.09ms
+Embedding généré en 0.19ms
+Recherche vectorielle: top_k=5, topic_filter=None
+0 chunks récupérés en 2.40ms
+API key OpenAI non configurée, utilisation du mode démo
+Réponse générée en 0.16ms
+Modèle d'embedding chargé: sentence-transformers/all-MiniLM-L6-v2
+Embedding généré en 313090.74ms
+Recherche vectorielle: top_k=5, topic_filter=None
+0 chunks récupérés en 12.09ms
+API key OpenAI non configurée, utilisation du mode démo
+Réponse générée en 0.00ms
+Modèle d'embedding chargé: sentence-transformers/all-MiniLM-L6-v2
+Embedding généré en 26142.43ms
+Recherche vectorielle: top_k=5, topic_filter=None
+0 chunks récupérés en 20.00ms
+API key OpenAI non configurée, utilisation du mode démo
+Réponse générée en 0.00ms
+Erreur envoi message: Cannot copy out of meta tensor; no data! Please use torch.nn.Module.to_empty() instead of torch.nn.Module.to() when moving module from meta to a different device.
+Embedding généré en 26.61ms
+Recherche vectorielle: top_k=5, topic_filter=None
+0 chunks récupérés en 0.00ms
+API key OpenAI non configurée, utilisation du mode démo
+Réponse générée en 0.00ms
+Embedding généré en 17.40ms
+Recherche vectorielle: top_k=5, topic_filter=None
+0 chunks récupérés en 0.00ms
+API key OpenAI non configurée, utilisation du mode démo
+Réponse générée en 0.00ms
+Embedding généré en 12.80ms
+Recherche vectorielle: top_k=5, topic_filter=None
+0 chunks récupérés en 0.00ms
+API key OpenAI non configurée, utilisation du mode démo
+Réponse générée en 0.00ms
+Embedding généré en 32.86ms
+Recherche vectorielle: top_k=5, topic_filter=None
+0 chunks récupérés en 0.00ms
+API key OpenAI non configurée, utilisation du mode démo
+Réponse générée en 0.00ms
+Embedding généré en 132.26ms
+Recherche vectorielle: top_k=5, topic_filter=None
+0 chunks récupérés en 2.99ms
+API key OpenAI non configurée, utilisation du mode démo
+Réponse générée en 0.00ms
+Embedding généré en 27.55ms
+Recherche vectorielle: top_k=5, topic_filter=None
+0 chunks récupérés en 1.63ms
+API key OpenAI non configurée, utilisation du mode démo
+Réponse générée en 0.00ms

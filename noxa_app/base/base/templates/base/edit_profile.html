@@ -58,7 +58,11 @@ JavaScript Dependencies:
 
         <div class="form__group">
             <label for="photo" class="form__group--label">Profile picture</label>
-            <img src="{{ user.photo.url }}" alt="Preview photo" class="photo-preview" id="photoPreview" onclick="document.getElementById('photo').click();" />
+            {% if user.photo %}
+                <img src="{{ user.photo.url }}" alt="Preview photo" class="photo-preview" id="photoPreview" onclick="document.getElementById('photo').click();" />
+            {% else %}
+                <img src="{% static 'images/avatar.svg' %}" alt="Preview photo" class="photo-preview" id="photoPreview" onclick="document.getElementById('photo').click();" />
+            {% endif %}
             <input type="file" name="photo" id="photo" class="form__group--control d-none" accept="image/*" onchange="previewPhoto(event)" />
             <small class="small-text">Click on image to change profile picture</small>
         </div>
@@ -84,7 +88,7 @@ JavaScript Dependencies:
         </div>
 
         <div class="form__group">
-            <label for="school" class="form__group--label">Institution</label>
+            <label for="school" class="form__group--label">Institution / School</label>
             <input type="text" class="form__group--control" id="school" name="school" placeholder="ENSAE Dakar" value="{{ user.school }}"/>
         </div>
 
