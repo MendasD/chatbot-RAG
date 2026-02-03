@@ -30,5 +30,7 @@ COPY . /app/
 # Port is provided by Railway env var
 EXPOSE ${PORT}
 
-# Run the application using the PORT variable
-CMD python noxa_app/base/manage.py migrate && python noxa_app/base/manage.py runserver 0.0.0.0:${PORT}
+# Run migrations and start the application using gunicorn
+CMD python noxa_app/base/manage.py migrate && \
+    python noxa_app/base/manage.py collectstatic --noinput && \
+    gunicorn --bind 0.0.0.0:${PORT} noxa.wsgi:application
