@@ -31,5 +31,4 @@ COPY . /app/
 EXPOSE ${PORT}
 
 # Run migrations and start the application using gunicorn
-CMD 
-    gunicorn --bind 0.0.0.0:${PORT} noxa.wsgi:application
+CMD gunicorn --bind 0.0.0.0:${PORT} noxa.wsgi:application
