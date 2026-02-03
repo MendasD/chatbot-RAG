@@ -35,7 +35,8 @@
             <select id="topicFilter">
                 <option value="">Tous les topics</option>
                 {% for topic in topics %}
-                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id == topic.id %}selected{% endif %}>
+                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id==topic.id
+                    %}selected{% endif %}>
                     {{ topic.name }}
                 </option>
                 {% endfor %}
@@ -190,10 +191,19 @@
                 <div class="file-preview-container" id="filePreviewContainer" style="display: none;">
                     <!-- Sera peuplé par JS -->
                 </div>
+
+                <!-- Options d'upload -->
+                <div class="upload-options" id="uploadOptions" style="display: none;">
+                    <label class="save-to-space-toggle">
+                        <input type="checkbox" id="saveToSpace" name="save_to_space">
+                        <span class="toggle-label">Sauvegarder dans mon espace</span>
+                    </label>
+                </div>
+
                 <div class="input-wrapper">
-                    <input type="file" id="fileInput" style="display: none;"
+                    <input type="file" id="fileInput" style="display: none;" multiple
                         accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt">
-                    <button type="button" class="attachment-btn" id="attachBtn" title="Ajouter un fichier">
+                    <button type="button" class="attachment-btn" id="attachBtn" title="Ajouter des fichiers">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path

@@ -136,9 +136,13 @@ def send_message(request, conversation_id):
             # Handle multipart/form-data
             user_message = request.POST.get('message', '').strip()
 
-        uploaded_file = request.FILES.get('file')
+        # Handle multiple files
+        uploaded_files = request.FILES.getlist('files')
+        # Also check single 'file' for backward compatibility or different client implementation
+        if not uploaded_files and request.FILES.get('file'):
+            uploaded_files = [request.FILES.get('file')]
 
-        if not user_message and not uploaded_file:
+        if not user_message and not uploaded_files:
             return JsonResponse({
                 'success': False,
                 'error': 'Message ou fichier vide'
@@ -149,9 +153,44 @@ def send_message(request, conversation_id):
             conversation=conversation,
             role='user',
             content=user_message,
-            file=uploaded_file,
-            file_type=uploaded_file.content_type if uploaded_file else None
+            # Legacy fields - keep for backward compatibility if needed, using first file
+            file=uploaded_files[0] if uploaded_files else None,
+            file_type=uploaded_files[0].content_type if uploaded_files else None
         )
+
+        # Handle attachments and "Save to Space"
+        save_to_space = request.POST.get('save_to_space') == 'true'
+        files_saved_count = 0
+        from .models import ChatAttachment
+        from base.models import Publication
+
+        for f in uploaded_files:
+            # Create specific attachment object
+            ChatAttachment.objects.create(
+                message=user_msg,
+                file=f,
+                file_size=f.size,
+                file_type=f.content_type
+            )
+
+            # Optional: Save to personal space (Publications)
+            if save_to_space:
+                # Basic validation: Publication model expects PDF mostly via validator, 
+                # but we can try to save other types if model allows, or restrict here.
+                # The model uses validatePdf validator.
+                is_pdf = f.name.lower().endswith('.pdf')
+                if is_pdf:
+                    try:
+                        Publication.objects.create(
+                            user=request.user,
+                            theme=f.name, # Use filename as theme/title
+                            file=f,
+                            description=f"Uploaded via Chat on {timezone.now().strftime('%Y-%m-%d %H:%M')}"
+                        )
+                        files_saved_count += 1
+                    except Exception as e:
+                        print(f"Error saving to space: {e}")
+
 
         # Récupère l'historique de la conversation (limité)
         history = list(conversation.messages.order_by('created_at').values(
@@ -178,6 +217,7 @@ def send_message(request, conversation_id):
             generation_time=response.generation_time,
             total_time=response.total_time
         )
+        
 
         # Sauvegarde les sources
         sources_data = []
@@ -228,7 +268,8 @@ def send_message(request, conversation_id):
                     'total_time': round(response.total_time, 2)
                 }
             },
-            'conversation_title': conversation.title
+            'conversation_title': conversation.title,
+            'files_saved': files_saved_count
         })
 
     except json.JSONDecodeError:

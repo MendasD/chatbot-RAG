@@ -34,7 +34,7 @@ class NoxaChat {
             filePreviewContainer: document.getElementById('filePreviewContainer'),
         };
 
-        this.selectedFile = null;
+        this.selectedFiles = []; // Changed from single file to array
 
         this.bindEvents();
         this.scrollToBottom();
@@ -123,7 +123,9 @@ class NoxaChat {
         charCount.textContent = `${count} / 2000`;
 
         // Activer/désactiver le bouton d'envoi
-        sendBtn.disabled = (count === 0 && !this.selectedFile) || count > 2000 || this.isLoading;
+        // On autorise l'envoi si on a du texte OU des fichiers
+        const hasFiles = this.selectedFiles.length > 0;
+        sendBtn.disabled = (count === 0 && !hasFiles) || count > 2000 || this.isLoading;
 
         // Auto-resize du textarea
         input.style.height = 'auto';
@@ -131,19 +133,40 @@ class NoxaChat {
     }
 
     handleFileSelect(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
 
-        this.selectedFile = file;
-        this.showFilePreview(file);
+        // Add new files to existing selection
+        this.selectedFiles = [...this.selectedFiles, ...files];
+
+        this.updateFilePreview();
         this.handleInput();
+
+        // Clear input to allow re-selecting same files if needed
+        e.target.value = '';
     }
 
-    showFilePreview(file) {
+    updateFilePreview() {
         const container = this.elements.filePreviewContainer;
+        const uploadOptions = document.getElementById('uploadOptions');
+
         if (!container) return;
 
-        container.innerHTML = `
+        if (this.selectedFiles.length === 0) {
+            container.style.display = 'none';
+            container.innerHTML = '';
+            if (uploadOptions) uploadOptions.style.display = 'none';
+            return;
+        }
+
+        container.style.display = 'flex';
+        container.style.flexWrap = 'wrap';
+        container.style.gap = '10px';
+
+        // Show upload options option whenever there are files
+        if (uploadOptions) uploadOptions.style.display = 'block';
+
+        container.innerHTML = this.selectedFiles.map((file, index) => `
             <div class="file-preview">
                 <div class="file-preview-icon">
                     ${this.getFileIcon(file.type)}
@@ -152,25 +175,27 @@ class NoxaChat {
                     <span class="file-preview-name">${this.escapeHtml(file.name)}</span>
                     <span class="file-preview-size">${this.formatFileSize(file.size)}</span>
                 </div>
-                <button type="button" class="remove-file-btn" id="removeFileBtn">
+                <button type="button" class="remove-file-btn" data-index="${index}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
                 </button>
             </div>
-        `;
+        `).join('');
 
-        container.style.display = 'block';
-
-        document.getElementById('removeFileBtn').addEventListener('click', () => this.removeFile());
+        // Bind remove events
+        container.querySelectorAll('.remove-file-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.currentTarget.dataset.index);
+                this.removeFile(index);
+            });
+        });
     }
 
-    removeFile() {
-        this.selectedFile = null;
-        this.elements.fileInput.value = '';
-        this.elements.filePreviewContainer.style.display = 'none';
-        this.elements.filePreviewContainer.innerHTML = '';
+    removeFile(index) {
+        this.selectedFiles.splice(index, 1);
+        this.updateFilePreview();
         this.handleInput();
     }
 
@@ -204,7 +229,8 @@ class NoxaChat {
         e.preventDefault();
 
         const message = this.elements.messageInput.value.trim();
-        if (!message || this.isLoading) return;
+        // Allow sending if there are files, even if message is empty
+        if ((!message && this.selectedFiles.length === 0) || this.isLoading) return;
 
         // Si pas de conversation active, en créer une d'abord (sans redirection)
         if (!this.conversationId) {
@@ -216,15 +242,25 @@ class NoxaChat {
         this.elements.sendBtn.disabled = true;
         this.elements.typingIndicator.style.display = 'flex';
 
+        // Check if save to space is enabled
+        const saveToSpace = document.getElementById('saveToSpace')?.checked || false;
+
         // Ajouter le message utilisateur à l'UI
-        this.addMessageToUI('user', message, this.selectedFile);
+        // Note: files passed here for UI display only
+        this.addMessageToUI('user', message, this.selectedFiles);
+
         this.elements.messageInput.value = '';
-        const fileToSend = this.selectedFile;
-        this.removeFile();
+
+        // Prepare data to send
+        const filesToSend = [...this.selectedFiles];
+
+        // Clear selection
+        this.selectedFiles = [];
+        this.updateFilePreview();
         this.handleInput();
 
         try {
-            const response = await this.sendMessage(message, fileToSend);
+            const response = await this.sendMessage(message, filesToSend, saveToSpace);
 
             if (response.success) {
                 // Ajouter la réponse de l'assistant
@@ -234,10 +270,16 @@ class NoxaChat {
                 if (response.conversation_title) {
                     this.updateConversationTitle(response.conversation_title);
                 }
+
+                // Show notification if files were saved
+                if (response.files_saved > 0) {
+                    this.showToast(`${response.files_saved} fichier(s) sauvegardé(s) dans votre espace`, 'success');
+                }
             } else {
                 this.showError(response.error || 'Erreur lors de l\'envoi du message');
             }
         } catch (error) {
+            console.error(error);
             this.showError('Erreur de connexion. Veuillez réessayer.');
         } finally {
             this.isLoading = false;
@@ -246,7 +288,7 @@ class NoxaChat {
         }
     }
 
-    async sendMessage(message, file = null) {
+    async sendMessage(message, files = [], saveToSpace = false) {
         const url = this.config.urls.sendMessage;
 
         let body;
@@ -254,10 +296,19 @@ class NoxaChat {
             'X-CSRFToken': this.config.csrfToken
         };
 
-        if (file) {
+        if (files.length > 0) {
             body = new FormData();
             body.append('message', message);
-            body.append('file', file);
+
+            // Append each file with the same key "files"
+            files.forEach(file => {
+                body.append('files', file);
+            });
+
+            if (saveToSpace) {
+                body.append('save_to_space', 'true');
+            }
+
             // Browser sets Content-Type automatically for FormData
         } else {
             body = JSON.stringify({ message });

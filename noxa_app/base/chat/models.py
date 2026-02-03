@@ -159,3 +159,37 @@ class ChatFeedback(models.Model):
 
     def __str__(self):
         return f"Feedback pour message {self.message.id} - {self.rating}/5"
+
+
+class ChatAttachment(models.Model):
+    """
+    Fichier joint à un message.
+    Permet d'avoir plusieurs fichiers par message.
+    """
+    message = models.ForeignKey(
+        ChatMessage,
+        on_delete=models.CASCADE,
+        related_name='attachments'
+    )
+    file = models.FileField(upload_to='chat_attachments/')
+    filename = models.CharField(max_length=255, blank=True)
+    file_size = models.IntegerField(default=0)
+    file_type = models.CharField(max_length=100, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Pièce jointe"
+        verbose_name_plural = "Pièces jointes"
+
+    def __str__(self):
+        return self.filename or f"Attachment {self.id}"
+
+    def save(self, *args, **kwargs):
+        if self.file and not self.filename:
+            self.filename = self.file.name
+        if self.file and not self.file_size:
+            try:
+                self.file_size = self.file.size
+            except:
+                pass
+        super().save(*args, **kwargs)
