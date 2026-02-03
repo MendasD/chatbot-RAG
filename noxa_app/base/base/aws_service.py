@@ -4,27 +4,29 @@ from pathlib import Path
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 
-# Charger le .env du même dossier
-BASE_DIR = Path(__file__).resolve().parent
-env_path = BASE_DIR / '.env'
-load_dotenv(env_path)
+# Charger le .env (priorité aux variables d'environnement système)
+# On ne charge le .env que si on n'est pas déjà dans un environnement configuré (ex: local dev)
+if not os.getenv('AWS_ACCESS_KEY_ID'):
+    BASE_DIR = Path(__file__).resolve().parent
+    env_path = BASE_DIR / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
+    load_dotenv() # Fallback to CWD .env
 
-load_dotenv()
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
-region = os.getenv('region', 'eu-north-1')
-bucket_name = os.getenv('bucket_name', 'noxapdfbucket')
+region = os.getenv('region', os.getenv('AWS_REGION', 'eu-north-1'))
+bucket_name = os.getenv('bucket_name', os.getenv('AWS_STORAGE_BUCKET_NAME', 'noxapdfbucket'))
 
-# Debug
-print("=" * 60)
-print("[DEBUG] AWS Service Configuration")
-print(f"[PATH] Loading .env from: {env_path}")
-print(f"[CHECK] File exists: {env_path.exists()}")
-print(f"[KEY] AWS_ACCESS_KEY_ID: {AWS_ACCESS_KEY_ID[:10] if AWS_ACCESS_KEY_ID else 'NOT FOUND'}...")
-print(f"[KEY] AWS_SECRET_ACCESS_KEY: {AWS_SECRET_ACCESS_KEY[:10] if AWS_SECRET_ACCESS_KEY else 'NOT FOUND'}...")
-print(f"[BUCKET] Bucket name: {bucket_name if bucket_name else 'NOT FOUND'}")
-print(f"[REGION] Region: {region if region else 'NOT FOUND'}")
-print("=" * 60)
+# Debug (safe version)
+if os.getenv('DEBUG', 'False') == 'True':
+    print("=" * 60)
+    print("[DEBUG] AWS Service Configuration")
+    print(f"[KEY] AWS_ACCESS_KEY_ID: {'FOUND' if AWS_ACCESS_KEY_ID else 'NOT FOUND'}")
+    print(f"[KEY] AWS_SECRET_ACCESS_KEY: {'FOUND' if AWS_SECRET_ACCESS_KEY else 'NOT FOUND'}")
+    print(f"[BUCKET] Bucket name: {bucket_name}")
+    print(f"[REGION] Region: {region}")
+    print("=" * 60)
 
 
 s3 = boto3.client(
