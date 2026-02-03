@@ -29,7 +29,12 @@ class NoxaChat {
             newChatTopic: document.getElementById('newChatTopic'),
             conversationsList: document.getElementById('conversationsList'),
             chatWelcome: document.getElementById('chatWelcome'),
+            attachBtn: document.getElementById('attachBtn'),
+            fileInput: document.getElementById('fileInput'),
+            filePreviewContainer: document.getElementById('filePreviewContainer'),
         };
+
+        this.selectedFile = null;
 
         this.bindEvents();
         this.scrollToBottom();
@@ -98,6 +103,14 @@ class NoxaChat {
                 }
             });
         }
+
+        // Pièces jointes
+        if (this.elements.attachBtn) {
+            this.elements.attachBtn.addEventListener('click', () => this.elements.fileInput.click());
+        }
+        if (this.elements.fileInput) {
+            this.elements.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+        }
     }
 
     handleInput() {
@@ -110,11 +123,71 @@ class NoxaChat {
         charCount.textContent = `${count} / 2000`;
 
         // Activer/désactiver le bouton d'envoi
-        sendBtn.disabled = count === 0 || count > 2000 || this.isLoading;
+        sendBtn.disabled = (count === 0 && !this.selectedFile) || count > 2000 || this.isLoading;
 
         // Auto-resize du textarea
         input.style.height = 'auto';
         input.style.height = Math.min(input.scrollHeight, 200) + 'px';
+    }
+
+    handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        this.selectedFile = file;
+        this.showFilePreview(file);
+        this.handleInput();
+    }
+
+    showFilePreview(file) {
+        const container = this.elements.filePreviewContainer;
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="file-preview">
+                <div class="file-preview-icon">
+                    ${this.getFileIcon(file.type)}
+                </div>
+                <div class="file-preview-info">
+                    <span class="file-preview-name">${this.escapeHtml(file.name)}</span>
+                    <span class="file-preview-size">${this.formatFileSize(file.size)}</span>
+                </div>
+                <button type="button" class="remove-file-btn" id="removeFileBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        `;
+
+        container.style.display = 'block';
+
+        document.getElementById('removeFileBtn').addEventListener('click', () => this.removeFile());
+    }
+
+    removeFile() {
+        this.selectedFile = null;
+        this.elements.fileInput.value = '';
+        this.elements.filePreviewContainer.style.display = 'none';
+        this.elements.filePreviewContainer.innerHTML = '';
+        this.handleInput();
+    }
+
+    getFileIcon(type) {
+        if (type.startsWith('image/')) return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
+        if (type.startsWith('audio/')) return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
+        if (type.startsWith('video/')) return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>';
+        if (type === 'application/pdf') return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>';
+        return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>';
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
 
     handleKeydown(e) {
@@ -144,12 +217,14 @@ class NoxaChat {
         this.elements.typingIndicator.style.display = 'flex';
 
         // Ajouter le message utilisateur à l'UI
-        this.addMessageToUI('user', message);
+        this.addMessageToUI('user', message, this.selectedFile);
         this.elements.messageInput.value = '';
+        const fileToSend = this.selectedFile;
+        this.removeFile();
         this.handleInput();
 
         try {
-            const response = await this.sendMessage(message);
+            const response = await this.sendMessage(message, fileToSend);
 
             if (response.success) {
                 // Ajouter la réponse de l'assistant
@@ -171,22 +246,34 @@ class NoxaChat {
         }
     }
 
-    async sendMessage(message) {
+    async sendMessage(message, file = null) {
         const url = this.config.urls.sendMessage;
+
+        let body;
+        let headers = {
+            'X-CSRFToken': this.config.csrfToken
+        };
+
+        if (file) {
+            body = new FormData();
+            body.append('message', message);
+            body.append('file', file);
+            // Browser sets Content-Type automatically for FormData
+        } else {
+            body = JSON.stringify({ message });
+            headers['Content-Type'] = 'application/json';
+        }
 
         const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': this.config.csrfToken
-            },
-            body: JSON.stringify({ message })
+            headers: headers,
+            body: body
         });
 
         return await response.json();
     }
 
-    addMessageToUI(role, content) {
+    addMessageToUI(role, content, file = null) {
         // Masquer l'écran de bienvenue
         if (this.elements.chatWelcome) {
             this.elements.chatWelcome.style.display = 'none';
@@ -211,15 +298,25 @@ class NoxaChat {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message message-${role}`;
 
-        const initial = role === 'user' ?
-            document.querySelector('.avatar-user')?.textContent || 'U' :
-            'N';
+        let fileHTML = '';
+        if (file) {
+            fileHTML = `
+                <div class="message-file">
+                    <div class="file-icon">${this.getFileIcon(file.type)}</div>
+                    <div class="file-info">
+                        <span class="file-name">${this.escapeHtml(file.name)}</span>
+                        <span class="file-size">${this.formatFileSize(file.size)}</span>
+                    </div>
+                </div>
+            `;
+        }
 
         messageDiv.innerHTML = `
             <div class="message-avatar">
                 <div class="avatar-${role}">${initial}</div>
             </div>
             <div class="message-content">
+                ${fileHTML}
                 <div class="message-text">${this.formatMessage(content)}</div>
             </div>
         `;
@@ -446,7 +543,7 @@ class NoxaChat {
             <button type="button" class="close-btn" aria-label="Close">&times;</button>
         `;
         toastContainer.appendChild(toast);
-        
+
         // Auto-remove après 3 secondes
         setTimeout(() => {
             toast.style.animation = 'slideOutUp 0.3s ease-out forwards';

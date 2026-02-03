@@ -77,6 +77,10 @@ class ChatMessage(models.Model):
     is_helpful = models.BooleanField(null=True, blank=True)
     feedback_text = models.TextField(blank=True)
 
+    # Pièces jointes (audio, documents, etc.)
+    file = models.FileField(upload_to='chat_attachments/', null=True, blank=True)
+    file_type = models.CharField(max_length=50, null=True, blank=True)
+
     class Meta:
         ordering = ['created_at']
         verbose_name = "Message"

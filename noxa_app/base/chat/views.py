@@ -129,20 +129,28 @@ def send_message(request, conversation_id):
             user=request.user
         )
 
-        data = json.loads(request.body)
-        user_message = data.get('message', '').strip()
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+            user_message = data.get('message', '').strip()
+        else:
+            # Handle multipart/form-data
+            user_message = request.POST.get('message', '').strip()
 
-        if not user_message:
+        uploaded_file = request.FILES.get('file')
+
+        if not user_message and not uploaded_file:
             return JsonResponse({
                 'success': False,
-                'error': 'Message vide'
+                'error': 'Message ou fichier vide'
             }, status=400)
 
         # Sauvegarde le message utilisateur
         user_msg = ChatMessage.objects.create(
             conversation=conversation,
             role='user',
-            content=user_message
+            content=user_message,
+            file=uploaded_file,
+            file_type=uploaded_file.content_type if uploaded_file else None
         )
 
         # Récupère l'historique de la conversation (limité)
