@@ -262,7 +262,9 @@ class NoxaChat {
         this.handleInput();
 
         try {
+            console.log("Sending message...", { message, filesToSend, saveToSpace });
             const response = await this.sendMessage(message, filesToSend, saveToSpace);
+            console.log("Response received:", response);
 
             if (response.success) {
                 // Ajouter la réponse de l'assistant
@@ -281,8 +283,8 @@ class NoxaChat {
                 this.showError(response.error || 'Erreur lors de l\'envoi du message');
             }
         } catch (error) {
-            console.error(error);
-            this.showError('Erreur de connexion. Veuillez réessayer.');
+            console.error("Error in handleSubmit:", error);
+            this.showError('Erreur de connexion : ' + error.message);
         } finally {
             this.isLoading = false;
             this.elements.sendBtn.disabled = false;
@@ -327,20 +329,17 @@ class NoxaChat {
     }
 
     addMessageToUI(role, content, files = null) {
-        // Masquer l'écran de bienvenue
-        if (this.elements.chatWelcome) {
-            this.elements.chatWelcome.style.display = 'none';
-        }
+        console.log("Adding message to UI:", { role, content, files });
 
-        // Afficher le container de messages
-        if (this.elements.messagesContainer) {
-            this.elements.messagesContainer.style.display = 'flex';
-        } else {
-            // Créer le container si inexistant
+        // S'assurer que le container existe
+        let container = document.getElementById('messagesContainer');
+
+        if (!container) {
+            console.log("Messages container not found, creating one...");
             const main = document.querySelector('.chat-main');
             const inputContainer = document.querySelector('.chat-input-container');
 
-            const container = document.createElement('div');
+            container = document.createElement('div');
             container.className = 'messages-container';
             container.id = 'messagesContainer';
 
@@ -348,8 +347,17 @@ class NoxaChat {
                 main.insertBefore(container, inputContainer);
             } else if (main) {
                 main.appendChild(container);
+            } else {
+                document.body.appendChild(container); // Fallback extreme
             }
-            this.elements.messagesContainer = container;
+        }
+
+        this.elements.messagesContainer = container;
+        container.style.display = 'flex';
+
+        // Masquer l'écran de bienvenue
+        if (this.elements.chatWelcome) {
+            this.elements.chatWelcome.style.display = 'none';
         }
 
         const messageDiv = document.createElement('div');
@@ -382,7 +390,7 @@ class NoxaChat {
         `;
 
         messageDiv.classList.add('new-message');
-        this.elements.messagesContainer.appendChild(messageDiv);
+        container.appendChild(messageDiv);
         this.scrollToBottom();
     }
 
