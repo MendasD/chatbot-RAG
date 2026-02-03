@@ -216,23 +216,25 @@
     const searchDropdown = document.getElementById('search-dropdown');
     const form = document.querySelector('.header__search--form');
 
-    // Show the dropdown when the input is focused
-    searchInput.addEventListener('focus', () => {
-        searchDropdown.style.display = 'block';
-    });
+    if (searchInput && searchDropdown && form) {
+        // Show the dropdown when the input is focused
+        searchInput.addEventListener('focus', () => {
+            searchDropdown.style.display = 'block';
+        });
 
-    // Hide the dropdown when a click occurs outside the search form
-    document.addEventListener('click', (event) => {
-        const isClickInsideForm = form.contains(event.target);
-        if (!isClickInsideForm) {
-            searchDropdown.style.display = 'none';
-        }
-    });
+        // Hide the dropdown when a click occurs outside the search form
+        document.addEventListener('click', (event) => {
+            const isClickInsideForm = form.contains(event.target);
+            if (!isClickInsideForm) {
+                searchDropdown.style.display = 'none';
+            }
+        });
 
-    // Optional: Prevent the form from submitting when clicking inside the dropdown
-    searchDropdown.addEventListener('click', (event) => {
-        event.stopPropagation();
-    });
+        // Optional: Prevent the form from submitting when clicking inside the dropdown
+        searchDropdown.addEventListener('click', (event) => {
+            event.stopPropagation();
+        });
+    }
 });
 </script>
 
