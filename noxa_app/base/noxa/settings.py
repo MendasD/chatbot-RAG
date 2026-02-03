@@ -84,7 +84,7 @@ WSGI_APPLICATION = 'noxa.wsgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+# https://docs.djangoproject.com/en/4.2/ref/settings/#databasess
 
 # Database configuration
 # Railway provide DATABASE_URL by We use Neon as fallback for production.
