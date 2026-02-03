@@ -10,7 +10,7 @@ tzdata==2025.2
 chandra-ocr==0.1.8
 pdf2image==1.16.3
 pymupdf==1.23.8
-python-dotenv==1.1.1 # Fixed version to resolve chandra-ocr conflict
+python-dotenv==1.1.1 # Fixed version to resolve chandra-ocr conflict GRAVE
 pyyaml==6.0.1
 torch
 transformers
