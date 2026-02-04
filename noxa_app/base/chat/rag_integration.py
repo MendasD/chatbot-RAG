@@ -50,6 +50,7 @@ class DjangoRAGService:
     def __init__(self):
         self.llm_handler = None
         self.retriever = None
+        self.missing_configs = []
         
         # Initialise les services
         self._initialize_services()
@@ -61,9 +62,15 @@ class DjangoRAGService:
         pinecone_key = getattr(settings, 'PINECONE_API_KEY', None)
         pinecone_index = getattr(settings, 'PINECONE_INDEX_NAME', None)
 
-        # Log détaillée pour Railway
+        # Log détaillé pour Railway
         logger.info("=" * 50)
         logger.info("🔍 DIAGNOSTIC DES CLÉS API (Railway/Production)")
+        
+        self.missing_configs = []
+        if not hf_token: self.missing_configs.append("HF_TOKEN")
+        if not pinecone_key: self.missing_configs.append("PINECONE_API_KEY")
+        if not pinecone_index: self.missing_configs.append("PINECONE_INDEX_NAME")
+
         logger.info(f"  - HF_TOKEN: {'✅ Présent' if hf_token else '❌ MANQUANT'}")
         if hf_token and 'hf_' not in hf_token:
              logger.warning("    ⚠️ HF_TOKEN semble mal formaté (devrait commencer par 'hf_')")
@@ -72,14 +79,11 @@ class DjangoRAGService:
         if pinecone_key and 'pcsk_' not in pinecone_key:
              logger.warning("    ⚠️ PINECONE_API_KEY semble mal formaté (devrait commencer par 'pcsk_')")
              
-        logger.info(f"  - PINECONE_INDEX_NAME: {'✅ Présent (' + pinecone_index + ')' if pinecone_index else '❌ MANQUANT'}")
+        logger.info(f"  - PINECONE_INDEX_NAME: {'✅ Présent (' + str(pinecone_index) + ')' if pinecone_index else '❌ MANQUANT'}")
         logger.info("=" * 50)
 
-        if not hf_token or not pinecone_key:
-            missing = []
-            if not hf_token: missing.append("HF_TOKEN")
-            if not pinecone_key: missing.append("PINECONE_API_KEY")
-            logger.error(f"❌ Configuration RAG incomplète. Clés manquantes : {', '.join(missing)}")
+        if self.missing_configs:
+            logger.error(f"❌ Configuration RAG incomplète. Clés manquantes : {', '.join(self.missing_configs)}")
             return
 
         try:
@@ -133,9 +137,15 @@ class DjangoRAGService:
                 query, topic_id, topic_name, conversation_history, top_k, total_start
             )
         else:
-            # Fallback neutre si les services ne sont pas initialisés
+            # Message détaillé sur les clés manquantes
+            if self.missing_configs:
+                missing_str = ", ".join(self.missing_configs)
+                answer = f"⚠️ Le système RAG n'est pas prêt. Variables manquantes sur Railway : **{missing_str}**."
+            else:
+                answer = "Le système RAG rencontre une erreur technique lors de l'initialisation (vérifiez les logs Railway)."
+
             return RAGResponse(
-                answer="Désolé, je ne peux pas traiter votre demande pour le moment car le système RAG n'est pas entièrement configuré (clés API manquantes).",
+                answer=answer,
                 sources=[],
                 query_embedding_time=0.0,
                 retrieval_time=0.0,
