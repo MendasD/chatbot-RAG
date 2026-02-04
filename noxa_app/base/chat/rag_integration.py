@@ -59,9 +59,27 @@ class DjangoRAGService:
         # Récupère les configurations
         hf_token = getattr(settings, 'HF_TOKEN', None)
         pinecone_key = getattr(settings, 'PINECONE_API_KEY', None)
+        pinecone_index = getattr(settings, 'PINECONE_INDEX_NAME', None)
+
+        # Log détaillé pour Railway
+        logger.info("=" * 50)
+        logger.info("🔍 DIAGNOSTIC DES CLÉS API (Railway/Production)")
+        logger.info(f"  - HF_TOKEN: {'✅ Présent' if hf_token else '❌ MANQUANT'}")
+        if hf_token and 'hf_' not in hf_token:
+             logger.warning("    ⚠️ HF_TOKEN semble mal formaté (devrait commencer par 'hf_')")
+             
+        logger.info(f"  - PINECONE_API_KEY: {'✅ Présent' if pinecone_key else '❌ MANQUANT'}")
+        if pinecone_key and 'pcsk_' not in pinecone_key:
+             logger.warning("    ⚠️ PINECONE_API_KEY semble mal formaté (devrait commencer par 'pcsk_')")
+             
+        logger.info(f"  - PINECONE_INDEX_NAME: {'✅ Présent (' + pinecone_index + ')' if pinecone_index else '❌ MANQUANT'}")
+        logger.info("=" * 50)
 
         if not hf_token or not pinecone_key:
-            logger.warning("⚠️  Configuration RAG incomplète : HF_TOKEN ou PINECONE_API_KEY manquant")
+            missing = []
+            if not hf_token: missing.append("HF_TOKEN")
+            if not pinecone_key: missing.append("PINECONE_API_KEY")
+            logger.error(f"❌ Configuration RAG incomplète. Clés manquantes : {', '.join(missing)}")
             return
 
         try:
