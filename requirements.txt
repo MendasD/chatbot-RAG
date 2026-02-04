@@ -1,4 +1,4 @@
---extra-index-url https://download.pytorch.org/whl/cpu
+# Extraction & Core
 asgiref==3.9.1
 Django==5.2.5
 Markdown==3.8.2
@@ -7,19 +7,21 @@ PyPDF2==3.0.1
 sqlparse==0.5.3
 typing_extensions==4.14.1
 tzdata==2025.2
-chandra-ocr==0.1.8
 pdf2image==1.16.3
 pymupdf==1.23.8
-python-dotenv==1.1.1 # Fixed version to resolve chandra-ocr conflict GRAVE
+python-dotenv==1.1.1
 pyyaml==6.0.1
-torch
-transformers
-boto3
+
+# Production & DB
 gunicorn
 whitenoise
 psycopg2-binary
 dj-database-url
-openai
+
+# AI & RAG (Optimized for CPU)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+transformers
 sentence-transformers
 huggingface-hub>=0.20.0
 pinecone-client>=3.0.0

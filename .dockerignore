@@ -11,5 +11,8 @@ noxa_app/base/db.sqlite3
 noxa_app/base/media/
 noxa_app/base/staticfiles/
 rag.log
+data/
+src.rar
+tests/
 .vscode/
 .idea/
