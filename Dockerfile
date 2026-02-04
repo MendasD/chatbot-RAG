@@ -27,8 +27,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project
 COPY . /app/
 
+# Collect static files for production
+RUN python noxa_app/base/manage.py collectstatic --noinput || true
+
 # Port is provided by Railway env var
 EXPOSE ${PORT}
 
 # Run migrations and start the application using gunicorn
-CMD python noxa_app/base/manage.py makemigrations && python noxa_app/base/manage.py migrate && gunicorn --bind 0.0.0.0:${PORT} noxa.wsgi:application
+# Optimized for high-memory models (torch/transformers) on limited RAM
+CMD python noxa_app/base/manage.py migrate && gunicorn --bind 0.0.0.0:${PORT} --workers 1 --threads 4 --timeout 120 --preload noxa.wsgi:application

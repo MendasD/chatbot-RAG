@@ -47,12 +47,19 @@ class EmbeddingService:
     def model(self):
         """Charge le modèle de manière paresseuse"""
         if self._model is None:
+            # Safe mode for low-memory environments (OOM prevention)
+            if os.getenv('DISABLE_AI_EMBEDDINGS', 'false').lower() == 'true':
+                logger.warning("Mode 'DISABLE_AI_EMBEDDINGS' activé. Utilisation du mode mock.")
+                self._model = "mock"
+                return self._model
+
             try:
                 from sentence_transformers import SentenceTransformer
+                logger.info(f"Chargement du modèle d'embedding: {self.model_name}...")
                 self._model = SentenceTransformer(self.model_name)
-                logger.info(f"Modèle d'embedding chargé: {self.model_name}")
-            except ImportError:
-                logger.warning("sentence-transformers non installé, utilisation du mode mock")
+                logger.info(f"Modèle d'embedding chargé avec succès: {self.model_name}")
+            except Exception as e:
+                logger.error(f"Erreur lors du chargement du modèle: {e}. Utilisation du mode mock.")
                 self._model = "mock"
         return self._model
 
