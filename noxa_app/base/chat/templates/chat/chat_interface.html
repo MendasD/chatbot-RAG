@@ -35,7 +35,8 @@
             <select id="topicFilter">
                 <option value="">Tous les topics</option>
                 {% for topic in topics %}
-                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id == topic.id %}selected{% endif %}>
+                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id==topic.id
+                    %}selected{% endif %}>
                     {{ topic.name }}
                 </option>
                 {% endfor %}
@@ -155,7 +156,7 @@
                             {% endif %}
                         </div>
                         <div class="file-info">
-                            <span class="file-name">{{ message.file.name|split:"/"|last }}</span>
+                            <span class="file-name">{{ message.file.name }}</span>
                         </div>
                     </div>
                     {% endif %}
