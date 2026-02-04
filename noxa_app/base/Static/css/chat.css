@@ -868,6 +868,7 @@ body .footer {
 
 #sendBtn:not(:disabled):active {
     transform: translateY(0);
+    /*}*/
     transform: scale(1.08);
     box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
 }
@@ -911,88 +912,6 @@ body .footer {
 
 .typing-indicator .dots span:nth-child(3) {
     animation-delay: 0.4s;
-}
-
-/* Refined Upload Options */
-.upload-options {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 8px;
-    animation: fadeInSlideUp 0.3s ease-out;
-}
-
-.upload-options-inner {
-    background: var(--primary-blue-light);
-    padding: 6px 14px;
-    border-radius: 20px;
-    border: 1px solid rgba(0, 102, 255, 0.2);
-    box-shadow: 0 2px 8px rgba(0, 102, 255, 0.05);
-}
-
-@keyframes fadeInSlideUp {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.save-to-space-toggle {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-    user-select: none;
-}
-
-.save-to-space-toggle input {
-    display: none;
-}
-
-.save-to-space-toggle .switch {
-    position: relative;
-    width: 32px;
-    height: 18px;
-    background: rgba(0, 102, 255, 0.2);
-    border-radius: 10px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.save-to-space-toggle .switch::after {
-    content: "";
-    position: absolute;
-    width: 14px;
-    height: 14px;
-    top: 2px;
-    left: 2px;
-    background: white;
-    border-radius: 50%;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.save-to-space-toggle input:checked+.switch {
-    background: var(--primary-blue);
-}
-
-.save-to-space-toggle input:checked+.switch::after {
-    left: 16px;
-}
-
-.save-to-space-toggle .toggle-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--primary-blue);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.save-to-space-toggle:hover .switch {
-    filter: brightness(1.1);
 }
 
 @keyframes blink {
