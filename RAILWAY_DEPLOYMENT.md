@@ -47,12 +47,9 @@ Une fois déployé, vérifiez les logs Railway. Vous devriez voir :
 
 ```
 ======================================================================
-🔧 Vérification de la configuration RAG
+🔧 Initialisation de la configuration RAG
 ======================================================================
-HF_TOKEN: ✅ Configuré
-PINECONE_API_KEY: ✅ Configuré
-======================================================================
-🚀 Mode PRODUCTION - LLM et Pinecone configurés
+🚀 Tentative de connexion aux services (Production)...
 Initialisation du LLM Handler...
 🤖 Initialisation LLM Handler...
    Modèle: meta-llama/Llama-3.1-8B-Instruct
@@ -60,13 +57,14 @@ Initialisation du LLM Handler...
 ✅ LLM Handler initialisé
 Initialisation du Pinecone Retriever...
 ✅ Retriever initialisé:
-   Index: llama-text-embed-v2-index
+   Index: noxa-rag
 ✅ Pinecone Retriever initialisé
+======================================================================
 ```
 
-## ⚠️ Si le Mode Démo Persiste
+## ⚠️ Si le Chatbot ne Répond Pas
 
-Si vous voyez toujours le message de mode démo, vérifiez :
+Si le chatbot affiche un message d'erreur indiquant que les clés API sont manquantes, vérifiez :
 
 ### Checklist de Dépannage
 
@@ -74,7 +72,7 @@ Si vous voyez toujours le message de mode démo, vérifiez :
 - [ ] Les noms des variables sont **exactement** : `HF_TOKEN`, `PINECONE_API_KEY`, `PINECONE_INDEX_NAME`
 - [ ] Les valeurs ne contiennent pas d'espaces avant/après
 - [ ] L'application a été redéployée après l'ajout des variables
-- [ ] Les logs montrent "🚀 Mode PRODUCTION" et non "⚠️ Mode DEMO"
+- [ ] Les logs montrent "✅ LLM Handler initialisé" et non une erreur de configuration
 
 ### Vérification dans les Logs
 
@@ -82,27 +80,24 @@ Cherchez dans les logs Railway :
 
 **✅ Bon signe** :
 ```
-🔧 Vérification de la configuration RAG
-HF_TOKEN: ✅ Configuré
-PINECONE_API_KEY: ✅ Configuré
-🚀 Mode PRODUCTION
+🔧 Initialisation de la configuration RAG
+✅ LLM Handler initialisé
+✅ Pinecone Retriever initialisé
 ```
 
 **❌ Problème** :
 ```
-HF_TOKEN: ❌ Non configuré ou invalide
-   Valeur détectée comme placeholder: your-huggingface-token...
-⚠️ Mode DEMO
+⚠️  Configuration RAG incomplète : HF_TOKEN ou PINECONE_API_KEY manquant
 ```
 
 ## 🧪 Test Final
 
-Une fois en mode production :
+Une fois les variables configurées :
 
 1. **Accédez au chatbot** sur Railway
 2. **Posez une question** : "Qu'est-ce que l'intelligence artificielle ?"
 3. **Vérifiez la réponse** :
-   - ❌ Si vous voyez "**Mode Démonstration Activé**" → Variables non configurées
+   - ❌ Si vous voyez "Désolé, je ne peux pas traiter votre demande... (clés API manquantes)" → Variables mal configurées
    - ✅ Si vous recevez une réponse intelligente avec sources → Succès !
 
 ## 📞 Support

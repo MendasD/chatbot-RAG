@@ -50,92 +50,51 @@ class DjangoRAGService:
     def __init__(self):
         self.llm_handler = None
         self.retriever = None
-        self.mode = "demo"  # "demo" ou "production"
         
-        # Vérifie les configurations
-        self._check_configuration()
+        # Initialise les services
         self._initialize_services()
-    
-    def _check_configuration(self):
-        """Vérifie si les clés API sont configurées"""
-        # Récupère les valeurs
-        hf_token = getattr(settings, 'HF_TOKEN', None)
-        pinecone_key = getattr(settings, 'PINECONE_API_KEY', None)
-        
-        # Valide que ce ne sont pas des placeholders
-        def is_valid_key(key):
-            if not key:
-                return False
-            if isinstance(key, str):
-                # Rejette les placeholders communs
-                invalid_values = ['your-', 'placeholder', 'example', 'test', 'none', '']
-                return not any(inv in key.lower() for inv in invalid_values)
-            return False
-        
-        has_hf = is_valid_key(hf_token)
-        has_pinecone = is_valid_key(pinecone_key)
-        
-        # Log détaillé pour debugging
-        logger.info("=" * 70)
-        logger.info("🔧 Vérification de la configuration RAG")
-        logger.info("=" * 70)
-        logger.info(f"HF_TOKEN: {'✅ Configuré' if has_hf else '❌ Non configuré ou invalide'}")
-        if hf_token and not has_hf:
-            logger.warning(f"   Valeur détectée comme placeholder: {hf_token[:20]}...")
-        logger.info(f"PINECONE_API_KEY: {'✅ Configuré' if has_pinecone else '❌ Non configuré ou invalide'}")
-        if pinecone_key and not has_pinecone:
-            logger.warning(f"   Valeur détectée comme placeholder: {pinecone_key[:20]}...")
-        logger.info("=" * 70)
-        
-        if has_hf and has_pinecone:
-            self.mode = "production"
-            logger.info("🚀 Mode PRODUCTION - LLM et Pinecone configurés")
-        else:
-            self.mode = "demo"
-            logger.warning("⚠️  Mode DEMO - Clés API manquantes ou invalides")
-            if not has_hf:
-                logger.warning("   - HF_TOKEN requis pour le LLM")
-            if not has_pinecone:
-                logger.warning("   - PINECONE_API_KEY requis pour la recherche vectorielle")
     
     def _initialize_services(self):
         """Initialise les services LLM et Retriever"""
-        if self.mode == "production":
-            try:
-                # Import des modules src/
-                from src.generation.llm_handler import LLMHandler
-                from src.retrieval.retriever import PineconeRetriever
-                
-                # Initialise le LLM Handler
-                logger.info("Initialisation du LLM Handler...")
-                self.llm_handler = LLMHandler(
-                    model_name=getattr(settings, 'LLM_MODEL', 'meta-llama/Llama-3.1-8B-Instruct'),
-                    api_key=settings.HF_TOKEN,
-                    temperature=getattr(settings, 'LLM_TEMPERATURE', 0.7),
-                    max_tokens=getattr(settings, 'LLM_MAX_TOKENS', 1000),
-                    provider=None  # Pas de provider spécifique
-                )
-                logger.info("✅ LLM Handler initialisé")
-                
-                # Initialise le Pinecone Retriever
-                logger.info("Initialisation du Pinecone Retriever...")
-                self.retriever = PineconeRetriever(
-                    api_key=settings.PINECONE_API_KEY,
-                    index_name=getattr(settings, 'PINECONE_INDEX_NAME', 'noxa-rag'),
-                    embed_model=getattr(settings, 'PINECONE_EMBED_MODEL', 'multilingual-e5-large'),
-                    rerank_model=getattr(settings, 'PINECONE_RERANK_MODEL', 'bge-reranker-v2-m3'),
-                    namespace=getattr(settings, 'PINECONE_NAMESPACE', '__default__')
-                )
-                logger.info("✅ Pinecone Retriever initialisé")
-                
-            except Exception as e:
-                logger.error(f"❌ Erreur initialisation services: {e}")
-                logger.error("Fallback en mode DEMO")
-                self.mode = "demo"
-                self.llm_handler = None
-                self.retriever = None
-        else:
-            logger.info("Mode DEMO - Services non initialisés")
+        # Récupère les configurations
+        hf_token = getattr(settings, 'HF_TOKEN', None)
+        pinecone_key = getattr(settings, 'PINECONE_API_KEY', None)
+
+        if not hf_token or not pinecone_key:
+            logger.warning("⚠️  Configuration RAG incomplète : HF_TOKEN ou PINECONE_API_KEY manquant")
+            return
+
+        try:
+            # Import des modules src/
+            from src.generation.llm_handler import LLMHandler
+            from src.retrieval.retriever import PineconeRetriever
+            
+            # Initialise le LLM Handler
+            logger.info("Initialisation du LLM Handler...")
+            self.llm_handler = LLMHandler(
+                model_name=getattr(settings, 'LLM_MODEL', 'meta-llama/Llama-3.1-8B-Instruct'),
+                api_key=hf_token,
+                temperature=getattr(settings, 'LLM_TEMPERATURE', 0.7),
+                max_tokens=getattr(settings, 'LLM_MAX_TOKENS', 1000),
+                provider=None
+            )
+            logger.info("✅ LLM Handler initialisé")
+            
+            # Initialise le Pinecone Retriever
+            logger.info("Initialisation du Pinecone Retriever...")
+            self.retriever = PineconeRetriever(
+                api_key=pinecone_key,
+                index_name=getattr(settings, 'PINECONE_INDEX_NAME', 'noxa-rag'),
+                embed_model=getattr(settings, 'PINECONE_EMBED_MODEL', 'multilingual-e5-large'),
+                rerank_model=getattr(settings, 'PINECONE_RERANK_MODEL', 'bge-reranker-v2-m3'),
+                namespace=getattr(settings, 'PINECONE_NAMESPACE', '__default__')
+            )
+            logger.info("✅ Pinecone Retriever initialisé")
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur initialisation services RAG: {e}")
+            self.llm_handler = None
+            self.retriever = None
     
     def process_query(
         self,
@@ -147,27 +106,23 @@ class DjangoRAGService:
     ) -> RAGResponse:
         """
         Traite une requête utilisateur avec le pipeline RAG
-        
-        Args:
-            query: Question de l'utilisateur
-            topic_id: ID du topic pour filtrer (optionnel)
-            topic_name: Nom du topic pour le contexte
-            conversation_history: Historique des messages
-            top_k: Nombre de documents à récupérer
-            
-        Returns:
-            RAGResponse avec la réponse et les métriques
         """
         import time
         total_start = time.time()
         
-        if self.mode == "production" and self.llm_handler and self.retriever:
+        if self.llm_handler and self.retriever:
             return self._process_query_production(
                 query, topic_id, topic_name, conversation_history, top_k, total_start
             )
         else:
-            return self._process_query_demo(
-                query, topic_id, topic_name, total_start
+            # Fallback neutre si les services ne sont pas initialisés
+            return RAGResponse(
+                answer="Désolé, je ne peux pas traiter votre demande pour le moment car le système RAG n'est pas entièrement configuré (clés API manquantes).",
+                sources=[],
+                query_embedding_time=0.0,
+                retrieval_time=0.0,
+                generation_time=0.0,
+                total_time=(time.time() - total_start) * 1000
             )
     
     def _process_query_production(
@@ -262,77 +217,6 @@ class DjangoRAGService:
             total_time=total_time
         )
     
-    def _process_query_demo(
-        self,
-        query: str,
-        topic_id: Optional[int],
-        topic_name: Optional[str],
-        total_start: float
-    ) -> RAGResponse:
-        """Traite la requête en mode démo (sans API)"""
-        import time
-        
-        logger.info(f"🎭 Traitement requête DEMO: {query[:100]}...")
-        
-        # Simule des temps de traitement
-        time.sleep(0.1)
-        retrieval_time = 100.0
-        gen_time = 200.0
-        
-        # Récupère des chunks de la base Django (fallback)
-        from base.models import DocumentChunk
-        
-        chunks_qs = DocumentChunk.objects.select_related('publication')
-        if topic_id:
-            chunks_qs = chunks_qs.filter(publication__topic_id=topic_id)
-        
-        chunks = list(chunks_qs[:5])
-        
-        sources = []
-        for chunk in chunks:
-            sources.append(RetrievedChunk(
-                publication_id=chunk.publication.id,
-                publication_title=chunk.publication.theme,
-                chunk_index=chunk.chunk_index,
-                content=chunk.content[:500],
-                page_number=chunk.page_number,
-                relevance_score=0.75,
-                metadata={
-                    'document_name': chunk.publication.theme,
-                    'page_numbers': chunk.page_number
-                }
-            ))
-        
-        # Génère une réponse de démo
-        answer = f"""**Mode Démonstration Activé** 🎭
-
-Votre question : "{query}"
-
-Le système RAG est en mode démonstration car les clés API ne sont pas configurées.
-
-**Pour activer le mode production :**
-1. Configurez `HF_TOKEN` dans les variables d'environnement Railway
-2. Configurez `PINECONE_API_KEY` dans les variables d'environnement Railway
-3. Redémarrez l'application
-
-**Documents trouvés :** {len(sources)} chunks récupérés de la base de données Django.
-
-En mode production, le système utilisera :
-- 🤖 **LLM** : HuggingFace LLaMA 3.1-8B-Instruct
-- 🔍 **Vector Store** : Pinecone avec reranking
-- 📚 **Sources** : Citations automatiques des documents pertinents
-"""
-        
-        total_time = (time.time() - total_start) * 1000
-        
-        return RAGResponse(
-            answer=answer,
-            sources=sources,
-            query_embedding_time=0.0,
-            retrieval_time=retrieval_time,
-            generation_time=gen_time,
-            total_time=total_time
-        )
     
     def _generate_fallback_response(self, query: str, chunks: List) -> str:
         """Génère une réponse de fallback si le LLM échoue"""

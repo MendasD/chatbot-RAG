@@ -252,13 +252,12 @@ Réponds à cette question en te basant sur les documents fournis. Cite tes sour
     def _call_llm(self, system_prompt: str, user_prompt: str) -> str:
         """Appelle l'API du LLM"""
         if not self.api_key or self.api_key == 'openai-api-key':
-            logger.warning("API key OpenAI non configurée, utilisation du mode démo")
-            return self._generate_demo_response(user_prompt)
+            logger.warning("Clé API LLM non configurée")
+            return "Désolé, je ne peux pas générer de réponse pour le moment car le service LLM n'est pas configuré."
 
         try:
             import openai
             client = openai.OpenAI(api_key=self.api_key)
-
             response = client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -274,29 +273,6 @@ Réponds à cette question en te basant sur les documents fournis. Cite tes sour
         except Exception as e:
             logger.error(f"Erreur OpenAI: {e}")
             raise
-
-    def _generate_demo_response(self, user_prompt: str) -> str:
-        """Génère une réponse de démonstration"""
-        # Extrait la question du prompt
-        if "Question de l'étudiant:" in user_prompt:
-            question = user_prompt.split("Question de l'étudiant:")[-1].split("\n")[0].strip()
-        else:
-            question = "votre question"
-
-        return f"""Merci pour votre question sur "{question}".
-
-**Mode démonstration activé** - L'API OpenAI n'est pas configurée.
-
-Pour activer les réponses complètes:
-1. Ajoutez votre clé API OpenAI dans `settings.py`
-2. Ou configurez une variable d'environnement `OPENAI_API_KEY`
-
-En attendant, voici ce que le système a trouvé dans les documents:
-- Les chunks pertinents ont été récupérés avec succès
-- Le système de recherche vectorielle fonctionne correctement
-- Les sources sont prêtes à être citées
-
-Configurez l'API pour obtenir des réponses intelligentes basées sur vos documents académiques."""
 
     def _generate_fallback_response(
         self,
