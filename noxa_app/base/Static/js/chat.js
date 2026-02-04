@@ -391,6 +391,7 @@ class NoxaChat {
 
         messageDiv.classList.add('new-message');
         container.appendChild(messageDiv);
+        this.renderMath(messageDiv);
         this.scrollToBottom();
     }
 
@@ -458,6 +459,7 @@ class NoxaChat {
             btn.addEventListener('click', (e) => this.handleFeedback(e));
         });
 
+        this.renderMath(messageDiv);
         this.scrollToBottom();
     }
 
@@ -467,6 +469,20 @@ class NoxaChat {
             .split('\n\n')
             .map(para => `<p>${para.replace(/\n/g, '<br>')}</p>`)
             .join('');
+    }
+
+    renderMath(element) {
+        if (typeof renderMathInElement === 'function') {
+            renderMathInElement(element, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                    { left: '\\(', right: '\\)', display: false },
+                    { left: '\\[', right: '\\]', display: true }
+                ],
+                throwOnError: false
+            });
+        }
     }
 
     escapeHtml(text) {
