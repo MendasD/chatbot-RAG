@@ -58,19 +58,45 @@ class DjangoRAGService:
     
     def _check_configuration(self):
         """Vérifie si les clés API sont configurées"""
-        has_hf = bool(getattr(settings, 'HF_TOKEN', None))
-        has_pinecone = bool(getattr(settings, 'PINECONE_API_KEY', None))
+        # Récupère les valeurs
+        hf_token = getattr(settings, 'HF_TOKEN', None)
+        pinecone_key = getattr(settings, 'PINECONE_API_KEY', None)
+        
+        # Valide que ce ne sont pas des placeholders
+        def is_valid_key(key):
+            if not key:
+                return False
+            if isinstance(key, str):
+                # Rejette les placeholders communs
+                invalid_values = ['your-', 'placeholder', 'example', 'test', 'none', '']
+                return not any(inv in key.lower() for inv in invalid_values)
+            return False
+        
+        has_hf = is_valid_key(hf_token)
+        has_pinecone = is_valid_key(pinecone_key)
+        
+        # Log détaillé pour debugging
+        logger.info("=" * 70)
+        logger.info("🔧 Vérification de la configuration RAG")
+        logger.info("=" * 70)
+        logger.info(f"HF_TOKEN: {'✅ Configuré' if has_hf else '❌ Non configuré ou invalide'}")
+        if hf_token and not has_hf:
+            logger.warning(f"   Valeur détectée comme placeholder: {hf_token[:20]}...")
+        logger.info(f"PINECONE_API_KEY: {'✅ Configuré' if has_pinecone else '❌ Non configuré ou invalide'}")
+        if pinecone_key and not has_pinecone:
+            logger.warning(f"   Valeur détectée comme placeholder: {pinecone_key[:20]}...")
+        logger.info("=" * 70)
         
         if has_hf and has_pinecone:
             self.mode = "production"
             logger.info("🚀 Mode PRODUCTION - LLM et Pinecone configurés")
         else:
             self.mode = "demo"
-            logger.warning("⚠️  Mode DEMO - Clés API manquantes")
+            logger.warning("⚠️  Mode DEMO - Clés API manquantes ou invalides")
             if not has_hf:
-                logger.warning("   - HF_TOKEN non configuré")
+                logger.warning("   - HF_TOKEN requis pour le LLM")
             if not has_pinecone:
-                logger.warning("   - PINECONE_API_KEY non configuré")
+                logger.warning("   - PINECONE_API_KEY requis pour la recherche vectorielle")
     
     def _initialize_services(self):
         """Initialise les services LLM et Retriever"""
