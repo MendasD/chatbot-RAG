@@ -5,6 +5,7 @@ Connecte les modules src/ (LLMHandler, PineconeRetriever) au chatbot Django
 import sys
 import os
 import logging
+import traceback
 from typing import List, Dict, Optional
 from dataclasses import dataclass
 
@@ -61,9 +62,6 @@ class DjangoRAGService:
         hf_token = getattr(settings, 'HF_TOKEN', None)
         pinecone_key = getattr(settings, 'PINECONE_API_KEY', None)
         pinecone_index = getattr(settings, 'PINECONE_INDEX_NAME', None)
-        print(f"HF_TOKEN: {hf_token}")
-        print(f"PINECONE_API_KEY: {pinecone_key}")
-        print(f"PINECONE_INDEX_NAME: {pinecone_index}")
 
         # Log détaillé pour Railway
         logger.info("=" * 50)
@@ -76,16 +74,13 @@ class DjangoRAGService:
 
         logger.info(f"  - HF_TOKEN: {'✅ Présent' if hf_token else '❌ MANQUANT'}")
         if hf_token and 'hf_' not in hf_token:
-             logger.warning("    ⚠️ HF_TOKEN semble mal formaté (devrait commencer par 'hf_')")
+             logger.warning("    ⚠️ HF_TOKEN semble mal formaté")
              
         logger.info(f"  - PINECONE_API_KEY: {'✅ Présent' if pinecone_key else '❌ MANQUANT'}")
         if pinecone_key and 'pcsk_' not in pinecone_key:
-             logger.warning("    ⚠️ PINECONE_API_KEY semble mal formaté (devrait commencer par 'pcsk_')")
+             logger.warning("    ⚠️ PINECONE_API_KEY semble mal formaté")
              
         logger.info(f"  - PINECONE_INDEX_NAME: {'✅ Présent (' + str(pinecone_index) + ')' if pinecone_index else '❌ MANQUANT'}")
-        print(f"PINECONE_INDEX_NAME: {pinecone_index}")
-        print(f"PINECONE_INDEX_NAME: {pinecone_index}")
-        print(f"PINECONE_INDEX_NAME: {pinecone_index}")
         logger.info("=" * 50)
 
         if self.missing_configs:
@@ -120,7 +115,8 @@ class DjangoRAGService:
             logger.info("✅ Pinecone Retriever initialisé")
             
         except Exception as e:
-            logger.error(f"❌ Erreur initialisation services RAG: {e}")
+            logger.error(f"❌ Erreur CRITIQUE initialisation services RAG: {e}")
+            logger.error(traceback.format_exc())
             self.llm_handler = None
             self.retriever = None
     
