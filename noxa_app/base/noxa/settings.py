@@ -162,7 +162,17 @@ OPENAI_API_KEY = 'openai-api-key'
 
 # RAG Configuration
 from dotenv import load_dotenv
-load_dotenv()
+import os
+from pathlib import Path
+
+# Charge .env.local en priorité (pour le dev local), sinon .env
+env_local = Path(BASE_DIR).parent.parent / '.env.local'
+env_file = Path(BASE_DIR).parent.parent / '.env'
+
+if env_local.exists():
+    load_dotenv(env_local)
+else:
+    load_dotenv(env_file)
 
 # HuggingFace
 HF_TOKEN = os.getenv('HF_TOKEN', None)

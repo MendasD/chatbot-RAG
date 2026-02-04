@@ -23,3 +23,6 @@ openai
 sentence-transformers
 huggingface-hub>=0.20.0
 pinecone-client>=3.0.0
+python-doctr[torch]
+numpy
+opencv-python-headless

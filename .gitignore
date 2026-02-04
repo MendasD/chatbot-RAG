@@ -28,3 +28,7 @@ staticfiles/
 
 # Ignorer les fichiers médias téléchargés
 media/
+
+# Ignorer les fichiers d'environnement avec clés API
+.env.local
+.env.production
