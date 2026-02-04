@@ -61,7 +61,7 @@ class DjangoRAGService:
         pinecone_key = getattr(settings, 'PINECONE_API_KEY', None)
         pinecone_index = getattr(settings, 'PINECONE_INDEX_NAME', None)
 
-        # Log détaillé pour Railway
+        # Log détaillée pour Railway
         logger.info("=" * 50)
         logger.info("🔍 DIAGNOSTIC DES CLÉS API (Railway/Production)")
         logger.info(f"  - HF_TOKEN: {'✅ Présent' if hf_token else '❌ MANQUANT'}")
