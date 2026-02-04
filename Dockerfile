@@ -34,5 +34,4 @@ RUN python noxa_app/base/manage.py collectstatic --noinput || true
 EXPOSE ${PORT}
 
 # Run migrations and start the application using gunicorn
-# Optimized for high-memory models (torch/transformers) on limited RAM
-CMD python noxa_app/base/manage.py migrate && gunicorn --bind 0.0.0.0:${PORT} --workers 1 --threads 4 --timeout 120 --preload noxa.wsgi:application
+CMD python noxa_app/base/manage.py makemigrations && python noxa_app/base/manage.py migrate && gunicorn --bind 0.0.0.0:${PORT} noxa.wsgi:application
