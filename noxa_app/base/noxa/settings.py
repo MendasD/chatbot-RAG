@@ -160,6 +160,25 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # OpenAI API
 OPENAI_API_KEY = 'openai-api-key'
 
+# RAG Configuration
+from dotenv import load_dotenv
+load_dotenv()
+
+# HuggingFace
+HF_TOKEN = os.getenv('HF_TOKEN', None)
+
+# Pinecone
+PINECONE_API_KEY = os.getenv('PINECONE_API_KEY', None)
+PINECONE_INDEX_NAME = os.getenv('PINECONE_INDEX_NAME', 'noxa-rag')
+PINECONE_EMBED_MODEL = os.getenv('PINECONE_EMBED_MODEL', 'multilingual-e5-large')
+PINECONE_RERANK_MODEL = os.getenv('PINECONE_RERANK_MODEL', 'bge-reranker-v2-m3')
+PINECONE_NAMESPACE = os.getenv('PINECONE_NAMESPACE', '__default__')
+
+# LLM
+LLM_MODEL = os.getenv('LLM_MODEL', 'meta-llama/Llama-3.1-8B-Instruct')
+LLM_TEMPERATURE = float(os.getenv('LLM_TEMPERATURE', '0.7'))
+LLM_MAX_TOKENS = int(os.getenv('LLM_MAX_TOKENS', '1000'))
+
 # Logging
 LOGGING = {
     'version': 1,

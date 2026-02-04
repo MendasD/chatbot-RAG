@@ -324,9 +324,16 @@ class RAGService:
     """
     Service principal RAG qui orchestre le pipeline complet:
     Query -> Embedding -> Retrieval -> Generation -> Response
+    
+    Utilise maintenant DjangoRAGService qui intègre les modules src/
     """
 
     def __init__(self):
+        # Utilise le nouveau service d'intégration
+        from chat.rag_integration import get_django_rag_service
+        self.django_rag = get_django_rag_service()
+        
+        # Garde les anciens services pour compatibilité (mode fallback)
         self.embedding_service = EmbeddingService()
         self.vector_store = VectorStoreService()
         self.llm_service = LLMService()
@@ -352,60 +359,13 @@ class RAGService:
         Returns:
             RAGResponse avec la réponse et les métriques
         """
-        total_start = time.time()
-
-        # 1. Embedding de la requête
-        embed_start = time.time()
-        query_embedding = self.embedding_service.embed_query(query)
-        embed_time = (time.time() - embed_start) * 1000
-        logger.info(f"Embedding généré en {embed_time:.2f}ms")
-
-        # 2. Récupération des documents pertinents
-        retrieval_start = time.time()
-        search_results = self.vector_store.search(
-            query_embedding=query_embedding,
-            top_k=top_k,
-            topic_filter=topic_id
-        )
-
-        retrieved_chunks = []
-        for result in search_results:
-            metadata = result.get('metadata', {})
-            chunk = RetrievedChunk(
-                publication_id=metadata.get('publication_id', 0),
-                publication_title=metadata.get('publication_title', 'Document inconnu'),
-                chunk_index=metadata.get('chunk_index', 0),
-                content=metadata.get('content', ''),
-                page_number=metadata.get('page_number'),
-                relevance_score=result.get('score', 0.0),
-                metadata=metadata
-            )
-            retrieved_chunks.append(chunk)
-
-        retrieval_time = (time.time() - retrieval_start) * 1000
-        logger.info(f"{len(retrieved_chunks)} chunks récupérés en {retrieval_time:.2f}ms")
-
-        # 3. Génération de la réponse
-        gen_start = time.time()
-        answer = self.llm_service.generate_response(
+        # Délègue au service d'intégration Django
+        return self.django_rag.process_query(
             query=query,
-            context_chunks=retrieved_chunks,
+            topic_id=topic_id,
+            topic_name=topic_name,
             conversation_history=conversation_history,
-            topic_name=topic_name
-        )
-        gen_time = (time.time() - gen_start) * 1000
-
-        logger.info(f"Réponse générée en {gen_time:.2f}ms")
-
-        total_time = (time.time() - total_start) * 1000
-
-        return RAGResponse(
-            answer=answer,
-            sources=retrieved_chunks,
-            query_embedding_time=embed_time,
-            retrieval_time=retrieval_time,
-            generation_time=gen_time,
-            total_time=total_time
+            top_k=top_k
         )
 
     def get_suggested_questions(self, topic_id: Optional[int] = None) -> List[str]:
@@ -418,25 +378,7 @@ class RAGService:
         Returns:
             Liste de questions suggérées
         """
-        # Questions génériques
-        suggestions = [
-            "Quels sont les mémoires disponibles sur ce sujet?",
-            "Peux-tu me résumer les principales conclusions?",
-            "Quelles méthodologies ont été utilisées dans ces travaux?",
-            "Y a-t-il des recommandations pour des travaux futurs?",
-            "Quelles sont les références bibliographiques importantes?"
-        ]
-
-        if topic_id:
-            # TODO: Générer des suggestions spécifiques au topic
-            from base.models import Topic
-            try:
-                topic = Topic.objects.get(id=topic_id)
-                suggestions.insert(0, f"Quels mémoires traitent de {topic.name}?")
-            except Topic.DoesNotExist:
-                pass
-
-        return suggestions
+        return self.django_rag.get_suggested_questions(topic_id)
 
 
 # Instance singleton pour réutilisation

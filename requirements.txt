@@ -21,3 +21,5 @@ psycopg2-binary
 dj-database-url
 openai
 sentence-transformers
+huggingface-hub>=0.20.0
+pinecone-client>=3.0.0

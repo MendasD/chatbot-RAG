@@ -4,7 +4,7 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-ENV PYTHONPATH="/app:/app/noxa_app/base"
+ENV PYTHONPATH="/app:/app/noxa_app/base:/app/src"
 ENV PORT 8000
 
 # Set work directory
@@ -34,4 +34,7 @@ RUN python noxa_app/base/manage.py collectstatic --noinput || true
 EXPOSE ${PORT}
 
 # Run migrations and start the application using gunicorn
-CMD python noxa_app/base/manage.py makemigrations && python noxa_app/base/manage.py migrate && gunicorn --bind 0.0.0.0:${PORT} noxa.wsgi:application
+# Note: HF_TOKEN and PINECONE_API_KEY should be set in Railway environment variables
+CMD python noxa_app/base/manage.py makemigrations && \
+    python noxa_app/base/manage.py migrate && \
+    gunicorn --bind 0.0.0.0:${PORT} --chdir /app/noxa_app/base noxa.wsgi:application

@@ -98,6 +98,10 @@ class TextPreprocessor:
         Returns:
             Texte nettoyé
         """
+        # Les formules LaTeX ne doivent pas Ãªtre modifiÃ©es
+        if content_type == "formula":
+            return content.strip()
+
         # Normalise les espaces
         if self.normalize_whitespace:
             content = self._normalize_whitespace(content)

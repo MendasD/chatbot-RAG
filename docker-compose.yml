@@ -12,7 +12,12 @@ services:
       - .env
     environment:
       - DJANGO_SETTINGS_MODULE=noxa.settings
-      - PYTHONPATH=/app:/app/noxa_app/base
+      - PYTHONPATH=/app:/app/noxa_app/base:/app/src
+      # LLM Configuration (override with .env file)
+      - HF_TOKEN=${HF_TOKEN}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
+      - LLM_MODEL=${LLM_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
     restart: always
 
 volumes:
