@@ -26,7 +26,6 @@ print("\n🤖 Service RAG:")
 try:
     from chat.rag_integration import get_django_rag_service
     rag = get_django_rag_service()
-    print(f"  Mode: {rag.mode}")
     print(f"  LLM Handler: {'✅ Initialisé' if rag.llm_handler else '❌ Non initialisé'}")
     print(f"  Retriever: {'✅ Initialisé' if rag.retriever else '❌ Non initialisé'}")
 except Exception as e:
