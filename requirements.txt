@@ -17,6 +17,7 @@ gunicorn
 whitenoise
 psycopg2-binary
 dj-database-url
+boto3
 
 # AI & RAG (Optimized for CPU)
 --extra-index-url https://download.pytorch.org/whl/cpu
