@@ -64,27 +64,21 @@ class DjangoRAGService:
         pinecone_index = getattr(settings, 'PINECONE_INDEX_NAME', None)
 
         # Log détaillé pour Railway
-        logger.info("=" * 50)
-        logger.info("🔍 DIAGNOSTIC DES CLÉS API (Railway/Production)")
+        print("\n" + "=" * 50)
+        print("🔍 DIAGNOSTIC RAG (Direct Print for Railway)")
         
         self.missing_configs = []
         if not hf_token: self.missing_configs.append("HF_TOKEN")
         if not pinecone_key: self.missing_configs.append("PINECONE_API_KEY")
         if not pinecone_index: self.missing_configs.append("PINECONE_INDEX_NAME")
 
-        logger.info(f"  - HF_TOKEN: {'✅ Présent' if hf_token else '❌ MANQUANT'}")
-        if hf_token and 'hf_' not in hf_token:
-             logger.warning("    ⚠️ HF_TOKEN semble mal formaté")
-             
-        logger.info(f"  - PINECONE_API_KEY: {'✅ Présent' if pinecone_key else '❌ MANQUANT'}")
-        if pinecone_key and 'pcsk_' not in pinecone_key:
-             logger.warning("    ⚠️ PINECONE_API_KEY semble mal formaté")
-             
-        logger.info(f"  - PINECONE_INDEX_NAME: {'✅ Présent (' + str(pinecone_index) + ')' if pinecone_index else '❌ MANQUANT'}")
-        logger.info("=" * 50)
+        print(f"  - HF_TOKEN: {'✅ Présent' if hf_token else '❌ MANQUANT'}")
+        print(f"  - PINECONE_API_KEY: {'✅ Présent' if pinecone_key else '❌ MANQUANT'}")
+        print(f"  - PINECONE_INDEX_NAME: {'✅ Présent (' + str(pinecone_index) + ')' if pinecone_index else '❌ MANQUANT'}")
+        print("=" * 50)
 
         if self.missing_configs:
-            logger.error(f"❌ Configuration RAG incomplète. Clés manquantes : {', '.join(self.missing_configs)}")
+            print(f"❌ Initialisation stoppée : Clés manquantes : {', '.join(self.missing_configs)}")
             return
 
         try:
@@ -93,7 +87,7 @@ class DjangoRAGService:
             from src.retrieval.retriever import PineconeRetriever
             
             # Initialise le LLM Handler
-            logger.info("Initialisation du LLM Handler...")
+            print("🚀 Initialisation du LLM Handler...")
             self.llm_handler = LLMHandler(
                 model_name=getattr(settings, 'LLM_MODEL', 'meta-llama/Llama-3.1-8B-Instruct'),
                 api_key=hf_token,
@@ -101,10 +95,10 @@ class DjangoRAGService:
                 max_tokens=getattr(settings, 'LLM_MAX_TOKENS', 1000),
                 provider=None
             )
-            logger.info("✅ LLM Handler initialisé")
+            print("✅ LLM Handler initialisé")
             
             # Initialise le Pinecone Retriever
-            logger.info("Initialisation du Pinecone Retriever...")
+            print("🚀 Initialisation du Pinecone Retriever...")
             self.retriever = PineconeRetriever(
                 api_key=pinecone_key,
                 index_name=getattr(settings, 'PINECONE_INDEX_NAME', 'noxa-rag'),
@@ -112,9 +106,14 @@ class DjangoRAGService:
                 rerank_model=getattr(settings, 'PINECONE_RERANK_MODEL', 'bge-reranker-v2-m3'),
                 namespace=getattr(settings, 'PINECONE_NAMESPACE', '__default__')
             )
-            logger.info("✅ Pinecone Retriever initialisé")
+            print("✅ Pinecone Retriever initialisé")
             
         except Exception as e:
+            print(f"\n❌ ERREUR CRITIQUE INITIALISATION RAG: {e}")
+            print("-" * 30)
+            traceback.print_exc()
+            print("-" * 30)
+            
             logger.error(f"❌ Erreur CRITIQUE initialisation services RAG: {e}")
             logger.error(traceback.format_exc())
             self.llm_handler = None
