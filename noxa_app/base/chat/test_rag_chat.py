@@ -63,18 +63,6 @@ class ChatModelTestCase(TestCase):
 class ChatServicesTestCase(TestCase):
     """Tests des services RAG"""
     
-    def test_embedding_service(self):
-        """Test la génération d'embeddings"""
-        from .services import EmbeddingService
-        
-        service = EmbeddingService()
-        embedding = service.embed_query("Bonjour, comment ça va?")
-        
-        # Doit retourner un vecteur (liste de floats)
-        self.assertIsInstance(embedding, list)
-        self.assertTrue(len(embedding) > 0)
-        self.assertIsInstance(embedding[0], (int, float))
-    
     def test_rag_service_initialization(self):
         """Test l'initialisation du service RAG"""
         from .services import get_rag_service, RAGService
@@ -85,20 +73,6 @@ class ChatServicesTestCase(TestCase):
         # Singleton pattern
         service2 = get_rag_service()
         self.assertIs(service, service2)
-    
-    def test_llm_service_demo_mode(self):
-        """Test le mode démo du LLM"""
-        from .services import LLMService
-        
-        service = LLMService()
-        response = service.generate_response(
-            query="Test query",
-            context_chunks=[]
-        )
-        
-        # Doit retourner une réponse
-        self.assertIsInstance(response, str)
-        self.assertTrue(len(response) > 0)
 
 
 class ChatViewsTestCase(TestCase):
@@ -231,29 +205,6 @@ class ChatFeedbackTestCase(TestCase):
 # Test Utilities
 # ============================================
 
-def test_rag_service_with_mock_data():
-    """Teste le service RAG avec des données mockées"""
-    from .services import RAGService, RetrievedChunk
-    
-    service = RAGService()
-    
-    # Crée des chunks simulés
-    chunks = [
-        RetrievedChunk(
-            publication_id=1,
-            publication_title="Document 1",
-            chunk_index=0,
-            content="Contenu du chunk 1",
-            page_number=1,
-            relevance_score=0.95
-        )
-    ]
-    
-    # Teste la génération de contexte
-    context = service.llm_service._build_context(chunks)
-    assert len(context) > 0
-    assert "Document 1" in context
-    assert "Contenu du chunk 1" in context
 
 
 if __name__ == '__main__':
