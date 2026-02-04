@@ -164,7 +164,7 @@ class NoxaChat {
         container.style.gap = '10px';
 
         // Show upload options option whenever there are files
-        if (uploadOptions) uploadOptions.style.display = 'flex';
+        if (uploadOptions) uploadOptions.style.display = 'block';
 
         container.innerHTML = this.selectedFiles.map((file, index) => `
             <div class="file-preview">
