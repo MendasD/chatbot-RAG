@@ -113,14 +113,14 @@ class PineconeRetriever:
         
         return []
 
-    def _truncate_for_rerank(self, text: str, max_tokens: int = 500) -> str:
+    def _truncate_for_rerank(self, text: str, max_tokens: int = 400) -> str:
         """
         Tronque le texte pour éviter les erreurs Pinecone rerank (limite tokens).
-        Approximation: 1 token ~ 4 caractères.
+        Approximation conservatrice: 1 token ~ 3 caractères.
         """
         if not text:
             return ""
-        max_chars = max_tokens * 4
+        max_chars = max_tokens * 3
         if len(text) <= max_chars:
             return text
         return text[:max_chars]

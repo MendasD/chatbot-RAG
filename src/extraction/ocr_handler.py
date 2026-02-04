@@ -10,7 +10,7 @@ import numpy as np
 from typing import List, Optional, Dict
 import re
 
-from document_schemas import ContentBlock, BoundingBox
+from .document_schemas import ContentBlock, BoundingBox
 
 
 class DocTROCRHandler:

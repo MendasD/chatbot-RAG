@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 import json
 
-from document_schemas import (
+from .document_schemas import (
     ExtractedDocument, 
     PageContent, 
     ContentBlock, 
