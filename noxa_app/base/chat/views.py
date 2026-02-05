@@ -163,6 +163,9 @@ def send_message(request, conversation_id):
         files_saved_count = 0
         from .models import ChatAttachment
         from base.models import Publication
+        from .document_processing import get_document_processing_service
+
+        processed_context = False
 
         for f in uploaded_files:
             # Create specific attachment object
@@ -175,9 +178,6 @@ def send_message(request, conversation_id):
 
             # Optional: Save to personal space (Publications)
             if save_to_space:
-                # Basic validation: Publication model expects PDF mostly via validator, 
-                # but we can try to save other types if model allows, or restrict here.
-                # The model uses validatePdf validator.
                 is_pdf = f.name.lower().endswith('.pdf')
                 if is_pdf:
                     try:
@@ -190,7 +190,41 @@ def send_message(request, conversation_id):
                         files_saved_count += 1
                     except Exception as e:
                         print(f"Error saving to space: {e}")
-
+            
+            # FAST TRACK: Process PDF immediately for RAG context
+            if f.name.lower().endswith('.pdf'):
+                try:
+                    logger.info(f"⚡ FAST TRACK: Processing {f.name} for immediate context...")
+                    # Save temp file for processing
+                    import os
+                    from django.conf import settings
+                    
+                    temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_uploads')
+                    os.makedirs(temp_dir, exist_ok=True)
+                    temp_path = os.path.join(temp_dir, f.name)
+                    
+                    with open(temp_path, 'wb+') as destination:
+                        for chunk in f.chunks():
+                            destination.write(chunk)
+                    
+                    # Process sync
+                    proc_service = get_document_processing_service()
+                    # Add user_id metadata so we can filter/track if needed (future proofing)
+                    proc_service.process_pdf(
+                        temp_path, 
+                        metadata={"user_id": request.user.id, "source": "chat_upload"},
+                        upload_to_pinecone=True
+                    )
+                    
+                    # Clean up temp file
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                        
+                    processed_context = True
+                    logger.info(f"✅ FAST TRACK: {f.name} processed and indexed!")
+                    
+                except Exception as e:
+                    logger.error(f"❌ FAST TRACK Error processing {f.name}: {e}")
 
         # Récupère l'historique récent (10 derniers messages AVANT l'actuel)
         # On utilise reverse() pour avoir les plus récents, puis on remet dans l'ordre chrono
