@@ -7,7 +7,7 @@ import os
 import logging
 import traceback
 from typing import List, Dict, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from django.conf import settings
 
@@ -27,7 +27,7 @@ class RetrievedChunk:
     content: str
     page_number: Optional[int]
     relevance_score: float
-    metadata: Dict
+    metadata: Dict = field(default_factory=dict)
     publication_id: Optional[int] = None
     attachment_id: Optional[int] = None
 
@@ -135,6 +135,11 @@ class DjangoRAGService:
         total_start = time.time()
         
         if self.llm_handler and self.retriever:
+            # Smart Routing: skip RAG for simple greetings or short messages
+            if self._is_simple_query(query):
+                logger.info(f"⚡ Smart Routing: simple query detected, bypassing RAG.")
+                return self._process_simple_query(query, conversation_history, total_start)
+                
             return self._process_query_production(
                 query, topic_id, topic_name, conversation_history, top_k, total_start
             )
@@ -248,6 +253,49 @@ class DjangoRAGService:
             sources=sources,
             query_embedding_time=0.0,  # Géré par Pinecone
             retrieval_time=retrieval_time,
+            generation_time=gen_time,
+            total_time=total_time
+        )
+
+    def _is_simple_query(self, query: str) -> bool:
+        """Détecte les requêtes simples (salutations, remerciements, etc.)"""
+        q = query.lower().strip()
+        # Salutations
+        greetings = {"salut", "bonjour", "hello", "hi", "coucou", "yo", "hey", "bonsoir"}
+        if q in greetings:
+            return True
+        
+        # Remerciements et courts messages
+        simple_phrases = {"merci", "thanks", "ok", "d'accord", "super", "ca marche", "ça marche"}
+        if q in simple_phrases:
+            return True
+        
+        # Trop court (moins de 3 mots, sans ponctuation interrogative)
+        words = q.split()
+        if len(words) < 3 and "?" not in q:
+            return True
+            
+        return False
+
+    def _process_simple_query(self, query: str, conversation_history: List[Dict], total_start: float) -> RAGResponse:
+        """Génère une réponse simple sans passer par Pinecone"""
+        import time
+        gen_start = time.time()
+        
+        prompt = f"L'utilisateur dit : {query}\n\nRéponds poliment et brièvement sans utiliser de contexte externe."
+        if conversation_history:
+            # On pourrait passer l'historique mais pour du simple on reste minimal
+            pass
+            
+        answer = self.llm_handler.generate_simple(prompt)
+        gen_time = (time.time() - gen_start) * 1000
+        total_time = (time.time() - total_start) * 1000
+        
+        return RAGResponse(
+            answer=answer,
+            sources=[],
+            query_embedding_time=0.0,
+            retrieval_time=0.0,
             generation_time=gen_time,
             total_time=total_time
         )
