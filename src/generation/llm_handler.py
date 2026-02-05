@@ -21,7 +21,7 @@ class LLMHandler:
         api_key: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 1000,
-        provider: Optional[str] = "novita"
+        provider: Optional[str] = None
     ):
         """
         Initialise le handler LLM
