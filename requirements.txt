@@ -20,6 +20,8 @@ whitenoise
 psycopg2-binary
 dj-database-url
 boto3
+cloudinary
+django-cloudinary-storage
 
 # AI & RAG (Optimized for CPU)
 --extra-index-url https://download.pytorch.org/whl/cpu
