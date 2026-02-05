@@ -128,7 +128,8 @@ class DjangoRAGService:
         topic_id: Optional[int] = None,
         topic_name: Optional[str] = None,
         conversation_history: List[Dict] = None,
-        top_k: int = 5
+        top_k: int = 5,
+        metadata_filter: Optional[Dict] = None
     ) -> RAGResponse:
         """
         Traite une requête utilisateur avec le pipeline RAG
@@ -143,7 +144,7 @@ class DjangoRAGService:
                 return self._process_simple_query(query, conversation_history, total_start)
                 
             return self._process_query_production(
-                query, topic_id, topic_name, conversation_history, top_k, total_start
+                query, topic_id, topic_name, conversation_history, top_k, total_start, metadata_filter
             )
         else:
             # Message détaillé sur les clés manquantes
@@ -169,7 +170,8 @@ class DjangoRAGService:
         topic_name: Optional[str],
         conversation_history: List[Dict],
         top_k: int,
-        total_start: float
+        total_start: float,
+        metadata_filter: Optional[Dict] = None
     ) -> RAGResponse:
         """Traite la requête en mode production avec LLM et Pinecone"""
         import time
@@ -182,7 +184,8 @@ class DjangoRAGService:
             enriched_chunks = self.retriever.retrieve(
                 query=query,
                 top_k=top_k,
-                rerank=True
+                rerank=True,
+                filter=metadata_filter
             )
             retrieval_time = (time.time() - retrieval_start) * 1000
             logger.info(f"✅ {len(enriched_chunks)} chunks récupérés en {retrieval_time:.2f}ms")

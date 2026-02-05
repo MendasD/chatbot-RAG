@@ -94,7 +94,9 @@ class DocumentProcessingService:
         self,
         pdf_path: str,
         metadata: Optional[Dict] = None,
-        upload_to_pinecone: bool = True
+        upload_to_pinecone: bool = True,
+        user_id: Optional[int] = None,
+        is_public: bool = False
     ) -> Dict:
         """
         Traite un PDF complet: extraction → chunking → upload Pinecone
@@ -116,6 +118,12 @@ class DocumentProcessingService:
             'upload': None,
             'errors': []
         }
+        
+        # Enrichit les metadata avec les infos de sécurité
+        if metadata is None:
+            metadata = {}
+        metadata['user_id'] = user_id
+        metadata['is_public'] = is_public
         
         try:
             # Phase 1: Extraction OCR
@@ -189,7 +197,9 @@ class DocumentProcessingService:
         self,
         directory_path: str,
         pattern: str = "*.pdf",
-        upload_to_pinecone: bool = True
+        upload_to_pinecone: bool = True,
+        user_id: Optional[int] = None,
+        is_public: bool = True
     ) -> List[Dict]:
         """
         Traite tous les PDFs d'un répertoire
@@ -212,7 +222,9 @@ class DocumentProcessingService:
             try:
                 stats = self.process_pdf(
                     str(pdf_file),
-                    upload_to_pinecone=upload_to_pinecone
+                    upload_to_pinecone=upload_to_pinecone,
+                    user_id=user_id,
+                    is_public=is_public
                 )
                 results.append(stats)
             except Exception as e:

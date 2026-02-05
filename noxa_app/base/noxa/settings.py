@@ -140,7 +140,7 @@ STATICFILES_DIRS = [
 ]
 
 # WhiteNoise configuration
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# (Note: In Django 4.2+, prefer using the STORAGES setting below)
 
 # Define the user model
 AUTH_USER_MODEL = 'base.CustomUser' # 'auth.User' by default
@@ -151,15 +151,28 @@ LOGIN_REDIRECT_URL = '/'  # Redirect to home after login
 LOGOUT_REDIRECT_URL = '/login/'  # Redirect to login after logout
 
 # Media files
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME', 'deqk7eblq'),
-    'API_KEY': os.getenv('CLOUDINARY_API_KEY', ''),
-    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET', ''),
+# Robust Cloudinary configuration
+cloudinary_url = os.getenv('CLOUDINARY_URL')
+if cloudinary_url:
+    CLOUDINARY_STORAGE = {
+        'CLOUDINARY_URL': cloudinary_url,
+    }
+else:
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME', 'deqk7eblq'),
+        'API_KEY': os.getenv('CLOUDINARY_API_KEY', ''),
+        'API_SECRET': os.getenv('CLOUDINARY_API_SECRET', ''),
+    }
+
+# Modern Django 4.2+ Storage configuration
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
 }
-
-# En production on utilise Cloudinary
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.RawMediaCloudinaryStorage'
-
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

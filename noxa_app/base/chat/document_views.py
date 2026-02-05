@@ -82,7 +82,9 @@ def upload_and_process_pdf(request):
         stats = service.process_pdf(
             str(pdf_path),
             metadata=metadata if metadata else None,
-            upload_to_pinecone=upload_to_pinecone
+            upload_to_pinecone=upload_to_pinecone,
+            user_id=request.user.id,
+            is_public=True  # Admin uploads are public by default
         )
         
         return JsonResponse({
@@ -112,7 +114,9 @@ def process_existing_pdfs(request):
         
         results = service.process_directory(
             str(service.raw_dir),
-            upload_to_pinecone=upload_to_pinecone
+            upload_to_pinecone=upload_to_pinecone,
+            user_id=request.user.id,
+            is_public=True
         )
         
         success_count = sum(1 for r in results if not r.get('errors'))

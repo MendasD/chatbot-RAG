@@ -167,7 +167,7 @@ class PineconeRetriever:
             metadata=meta
         )
 
-    def _query_pinecone(self, query: str, top_k: int) -> List[Dict]:
+    def _query_pinecone(self, query: str, top_k: int, filter: Optional[Dict] = None) -> List[Dict]:
         """Query Pinecone avec embedding"""
         print(f"\n🔍 Query Pinecone (top_k={top_k})...")
         
@@ -196,6 +196,7 @@ class PineconeRetriever:
             results = self.index.query(
                 vector=vec,
                 top_k=top_k,
+                filter=filter,
                 include_metadata=True,
                 namespace=self.namespace
             )
@@ -303,7 +304,8 @@ class PineconeRetriever:
         max_k: int = 12,
         rerank_threshold: float = 0.35,
         retrieve_k: int = 20,
-        rerank: bool = True
+        rerank: bool = True,
+        filter: Optional[Dict] = None
     ) -> List[EnrichedChunk]:
         """
         Récupère et rerank les chunks pour le LLM.
@@ -328,7 +330,7 @@ class PineconeRetriever:
         print(f"Rerank: {rerank}")
         
         # 1. Query Pinecone
-        candidates = self._query_pinecone(query, retrieve_k)
+        candidates = self._query_pinecone(query, retrieve_k, filter=filter)
         
         if not candidates:
             print("\n !!! Aucun résultat trouvé")

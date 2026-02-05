@@ -190,6 +190,8 @@ class SmartTextSplitter:
                         'document_author': doc.metadata.author,
                         'publication_id': doc.metadata.publication_id,
                         'attachment_id': doc.metadata.attachment_id,
+                        'user_id': doc.metadata.user_id,
+                        'is_public': doc.metadata.is_public,
                         'image_ids': [i.get('image_id') for i in images_used if i.get('image_id')],
                         'image_paths': [i.get('image_path') for i in images_used if i.get('image_path')],
                         'images': images_used,
@@ -458,6 +460,8 @@ class SmartTextSplitter:
             'document_author': ", ".join(doc.metadata.author) if doc.metadata.author else None,
             'publication_id': doc.metadata.publication_id,
             'attachment_id': doc.metadata.attachment_id,
+            'user_id': doc.metadata.user_id,
+            'is_public': doc.metadata.is_public,
         }
         if extra_metadata:
             metadata.update(extra_metadata)

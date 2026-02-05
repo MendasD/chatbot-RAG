@@ -271,7 +271,9 @@ def send_message(request, conversation_id):
                     proc_service.process_pdf(
                         temp_path, 
                         metadata=metadata,
-                        upload_to_pinecone=True
+                        upload_to_pinecone=True,
+                        user_id=request.user.id,
+                        is_public=save_to_space
                     )
                     
                     # Clean up temp file
@@ -289,6 +291,15 @@ def send_message(request, conversation_id):
         last_messages = conversation.messages.exclude(id=user_msg.id).order_by('-created_at')[:10]
         history = list(reversed(list(last_messages.values('role', 'content'))))
 
+        # Construit le filtre de métadonnées pour Pinecone
+        # On veut: (is_public == True) OR (user_id == current_user_id)
+        metadata_filter = {
+            "$or": [
+                {"is_public": {"$eq": True}},
+                {"user_id": {"$eq": request.user.id}}
+            ]
+        }
+
         # Appelle le service RAG
         rag_service = get_rag_service()
         response = rag_service.process_query(
@@ -296,7 +307,8 @@ def send_message(request, conversation_id):
             topic_id=conversation.topic_id if conversation.topic else None,
             topic_name=conversation.topic.name if conversation.topic else None,
             conversation_history=history,
-            top_k=5
+            top_k=5,
+            metadata_filter=metadata_filter
         )
 
         # Sauvegarde la réponse de l'assistant

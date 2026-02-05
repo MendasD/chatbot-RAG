@@ -229,7 +229,9 @@ class PDFExtractor:
             language=None, # PyMuPDF ne fournit pas cette info
             file_size=taille_mo,
             publication_id=default_metadata.get('publication_id') if default_metadata else None,
-            attachment_id=default_metadata.get('attachment_id') if default_metadata else None
+            attachment_id=default_metadata.get('attachment_id') if default_metadata else None,
+            user_id=default_metadata.get('user_id') if default_metadata else None,
+            is_public=default_metadata.get('is_public', False) if default_metadata else False
         )
     
     def _extract_toc(self, pdf_doc) -> List[TOCEntry]:

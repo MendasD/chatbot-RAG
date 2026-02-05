@@ -43,7 +43,10 @@ class GDriveSyncService:
                 if file_path.lower().endswith('.pdf'):
                     try:
                         logger.info(f"Traitement RAG pour: {file_path}")
-                        stats = self.doc_service.process_pdf(file_path)
+                        stats = self.doc_service.process_pdf(
+                            file_path,
+                            is_public=True
+                        )
                         results.append(stats)
                     except Exception as e:
                         logger.error(f"Erreur traitement RAG pour {file_path}: {e}")

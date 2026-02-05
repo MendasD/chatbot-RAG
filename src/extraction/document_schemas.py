@@ -74,6 +74,8 @@ class DocumentMetadata:
     file_size: Optional[int] = None # en Mo
     publication_id: Optional[int] = None
     attachment_id: Optional[int] = None
+    user_id: Optional[int] = None
+    is_public: bool = False
 
 
 @dataclass
