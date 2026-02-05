@@ -55,7 +55,7 @@ class PDFExtractor:
         self.output_dir = Path(self.config.get('output_dir', 'data/extracted'))
         self.temp_dir = Path(self.config.get('temp_dir', 'data/temp'))
         
-        # Configuration Cloudinary
+        # Configuration Cloudinaryy
         if os.getenv('CLOUDINARY_URL'):
             cloudinary.config(cloudinary_url=os.getenv('CLOUDINARY_URL'))
             print("✅ Cloudinary configuré avec CLOUDINARY_URL")
