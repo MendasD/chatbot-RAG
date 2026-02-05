@@ -3,6 +3,7 @@ LLM Handler pour la génération de réponses RAG
 Utilise HuggingFace Inference API avec LLaMA 3.1
 """
 import os
+import time
 from typing import List, Dict, Optional
 from huggingface_hub import InferenceClient
 
@@ -97,31 +98,43 @@ class LLMHandler:
         )
         print(f"   Messages construits ({len(messages)} messages)")
         
-        # Génère la réponse
-        try:
-            print(f"   Appel LLM pour génération...")
-            
-            # Prépare les paramètres
-            params = {
-                "model": self.model_name,
-                "messages": messages,
-                "temperature": self.temperature,
-                "max_tokens": self.max_tokens
-            }
-            
-            # Ajoute provider seulement s'il est défini
-            if self.provider:
-                params["provider"] = self.provider
-            
-            completion = self.client.chat.completions.create(**params)
-            
-            response_text = completion.choices[0].message.content
-            
-            print(f"   ✅ Réponse générée ({len(response_text)} chars)")
-            
-        except Exception as e:
-            print(f"   ❌ Erreur génération: {e}")
-            response_text = "Désolé, je n'ai pas pu générer de réponse. Erreur technique."
+        # Génère la réponse avec retry pour les erreurs de serveur (502/503)
+        max_retries = 3
+        retry_delay = 2
+        
+        for attempt in range(max_retries):
+            try:
+                print(f"   Appel LLM pour génération (tentative {attempt + 1})...")
+                
+                # Prépare les paramètres
+                params = {
+                    "model": self.model_name,
+                    "messages": messages,
+                    "temperature": self.temperature,
+                    "max_tokens": self.max_tokens
+                }
+                
+                if self.provider:
+                    params["provider"] = self.provider
+                
+                completion = self.client.chat.completions.create(**params)
+                response_text = completion.choices[0].message.content
+                print(f"   ✅ Réponse générée ({len(response_text)} chars)")
+                break  # Succès, on sort de la boucle
+                
+            except Exception as e:
+                error_str = str(e)
+                print(f"   ❌ Erreur génération (tentative {attempt + 1}): {error_str}")
+                
+                # Si c'est une erreur de serveur et qu'on a encore des tentatives
+                if ("502" in error_str or "503" in error_str or "Bad Gateway" in error_str) and attempt < max_retries - 1:
+                    print(f"   🔄 Retry dans {retry_delay}s...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    # Dernière tentative ou erreur non-récupérable
+                    response_text = "Désolé, je n'ai pas pu générer de réponse. Erreur technique (HuggingFace)."
+                    break
         
         # Formate avec sources si demandé
         if include_sources:

@@ -20,9 +20,9 @@ from .document_schemas import (
     TOCEntry,
     ExtractionStats
 )
-from ocr_handler import DocTROCRHandler
-from preprocessor import TextPreprocessor
-from math_ocr_handler import MathOCRHandler
+from .ocr_handler import DocTROCRHandler
+from .preprocessor import TextPreprocessor
+from .math_ocr_handler import MathOCRHandler
 
 
 class PDFExtractor:
