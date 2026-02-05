@@ -266,6 +266,48 @@ DOCUMENTS DE RÉFÉRENCE:
         return list(set(sources))  # Déduplique
     
     @staticmethod
+    def extract_metadata_blocks(response: str) -> Dict:
+        """
+        Extrait et retire les blocs de métadonnées de la réponse
+        """
+        import re
+        
+        metadata = {
+            'sources_used': [],
+            'images_used': [],
+            'equations_used': [],
+            'follow_up_questions': []
+        }
+        
+        clean_response = response
+        
+        # Patterns pour les blocs
+        patterns = {
+            'sources_used': r'SOURCES_USED:\s*\[(.*?)\]',
+            'images_used': r'IMAGES_USED:\s*\[(.*?)\]',
+            'equations_used': r'EQUATIONS_USED:\s*\[(.*?)\]',
+            'follow_up_questions': r'FOLLOW_UP_QUESTIONS:\s*\[(.*?)\]'
+        }
+        
+        for key, pattern in patterns.items():
+            match = re.search(pattern, clean_response, re.DOTALL)
+            if match:
+                content = match.group(1).strip()
+                # Parse la liste (split par , ou ;)
+                items = [item.strip() for item in re.split(r'[;,]', content) if item.strip()]
+                metadata[key] = items
+                # Retire le bloc de la réponse
+                clean_response = clean_response.replace(match.group(0), '')
+        
+        # Nettoyage final des espaces multiples
+        clean_response = re.sub(r'\n{3,}', '\n\n', clean_response).strip()
+        
+        return {
+            'clean_response': clean_response,
+            'metadata': metadata
+        }
+    
+    @staticmethod
     def format_response_with_sources(
         response: str,
         retrieved_chunks: List[Dict]
@@ -280,25 +322,33 @@ DOCUMENTS DE RÉFÉRENCE:
         Returns:
             Dict avec réponse et sources détaillées
         """
-        # Extrait les sources citées
-        cited_sources = PromptTemplates.extract_sources_from_response(response)
+        # Parse et nettoie la réponse
+        parsed_result = PromptTemplates.extract_metadata_blocks(response)
+        clean_response = parsed_result['clean_response']
+        metadata = parsed_result['metadata']
+        
+        # Extrait les sources citées (soit du texte, soit du bloc metadata si présent)
+        cited_sources = PromptTemplates.extract_sources_from_response(clean_response)
+        if metadata['sources_used']:
+            cited_sources.extend(metadata['sources_used'])
+        cited_sources = list(set(cited_sources))
         
         # Collecte les infos des sources
         sources_info = []
         for chunk in retrieved_chunks:
             if hasattr(chunk, "to_dict"):
                 chunk_dict = chunk.to_dict()
-                metadata = getattr(chunk, "metadata", {}) or {}
+                metadata_chunk = getattr(chunk, "metadata", {}) or {}
                 chunk_id = chunk_dict.get("chunk_id", "")
                 score_val = chunk_dict.get("score", 0.0)
             else:
                 chunk_dict = chunk
-                metadata = chunk.get('metadata', {})
+                metadata_chunk = chunk.get('metadata', {})
                 chunk_id = chunk.get('id', '')
                 score_val = chunk.get('score', 0.0)
             
-            doc_name = metadata.get('document_name', '')
-            pages = metadata.get('page_numbers', '')
+            doc_name = metadata_chunk.get('document_name', '')
+            pages = metadata_chunk.get('page_numbers', '')
             
             source_info = {
                 'document': doc_name,
@@ -311,10 +361,11 @@ DOCUMENTS DE RÉFÉRENCE:
                 sources_info.append(source_info)
         
         return {
-            'response': response,
+            'response': clean_response,  # Texte nettoyé sans métadonnées
             'cited_sources': cited_sources,
             'all_sources': sources_info,
-            'num_sources_used': len(retrieved_chunks)
+            'num_sources_used': len(retrieved_chunks),
+            'extracted_metadata': metadata  # Métadonnées structurées
         }
 
 

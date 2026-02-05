@@ -464,7 +464,12 @@ class NoxaChat {
     }
 
     formatMessage(content) {
-        // Convertir les sauts de ligne en <p> et <br>
+        // Si marked est disponible, on l'utilise pour le Markdown
+        if (typeof marked !== 'undefined') {
+            return marked.parse(content);
+        }
+
+        // Fallback si marked n'est pas chargé
         return content
             .split('\n\n')
             .map(para => `<p>${para.replace(/\n/g, '<br>')}</p>`)

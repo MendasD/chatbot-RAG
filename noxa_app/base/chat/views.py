@@ -192,10 +192,10 @@ def send_message(request, conversation_id):
                         print(f"Error saving to space: {e}")
 
 
-        # Récupère l'historique de la conversation (limité)
-        history = list(conversation.messages.order_by('created_at').values(
-            'role', 'content'
-        )[:10])
+        # Récupère l'historique récent (10 derniers messages AVANT l'actuel)
+        # On utilise reverse() pour avoir les plus récents, puis on remet dans l'ordre chrono
+        last_messages = conversation.messages.exclude(id=user_msg.id).order_by('-created_at')[:10]
+        history = list(reversed(list(last_messages.values('role', 'content'))))
 
         # Appelle le service RAG
         rag_service = get_rag_service()
