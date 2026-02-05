@@ -2,7 +2,10 @@
 Views pour l'application Chat - Interface Chatbot RAG
 """
 import json
+import os
+import uuid
 import logging
+import traceback
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods, require_POST, require_GET
@@ -392,10 +395,19 @@ def send_message(request, conversation_id):
         })
 
     except json.JSONDecodeError:
+        logger.error("❌ JSON Decode Error in send_message")
         return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
     except Exception as e:
-        logger.error(f"Erreur envoi message: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        error_msg = str(e)
+        stack_trace = traceback.format_exc()
+        logger.error(f"❌ FATAL ERROR in send_message: {error_msg}")
+        logger.error(f"📝 STACK TRACE:\n{stack_trace}")
+        
+        # Log specifically for column mapping issues
+        if "metadata" in error_msg or "column" in error_msg.lower():
+            logger.error("⚠️ Possible database schema mismatch (missing metadata column).")
+            
+        return JsonResponse({'success': False, 'error': error_msg}, status=500)
 
 
 @login_required
