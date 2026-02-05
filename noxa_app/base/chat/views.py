@@ -228,6 +228,9 @@ def send_message(request, conversation_id):
                 file_size=f.size,
                 file_type=f.content_type
             )
+            
+            # Reset file pointer for subsequent operations
+            f.seek(0)
 
             # Optional: Save to personal space (Publications)
             if save_to_space:
@@ -243,6 +246,9 @@ def send_message(request, conversation_id):
                         files_saved_count += 1
                     except Exception as e:
                         print(f"Error saving to space: {e}")
+                    
+                    # Reset file pointer after Publication save
+                    f.seek(0)
             
             # FAST TRACK: Process PDF immediately for RAG context
             if f.name.lower().endswith('.pdf'):
@@ -255,6 +261,9 @@ def send_message(request, conversation_id):
                     temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_uploads')
                     os.makedirs(temp_dir, exist_ok=True)
                     temp_path = os.path.join(temp_dir, f.name)
+                    
+                    # Reset file pointer before reading for temp file
+                    f.seek(0)
                     
                     with open(temp_path, 'wb+') as destination:
                         for chunk in f.chunks():
