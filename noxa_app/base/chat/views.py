@@ -69,11 +69,49 @@ def conversation_view(request, conversation_id):
 
     topics = Topic.objects.all()
 
+    # Récupère tous les documents liés à la conversation (Uploads + Sources citées)
+    from .models import ChatAttachment
+    
+    # 1. Documents uploadés (ChatAttachment)
+    attachments = ChatAttachment.objects.filter(
+        message__conversation=conversation
+    ).select_related('message')
+    
+    # 2. Sources citées (ChatSource)
+    # Note: On utilise select_related pour éviter N+1 requêtes
+    cited_sources = ChatSource.objects.filter(
+        message__conversation=conversation
+    ).select_related('publication')
+    
+    # Fusionne en liste unique par nom de fichier/thème
+    unique_docs = {}
+    
+    for att in attachments:
+        # On utilise le nom du fichier comme clé unique
+        name = att.file.name.split('/')[-1]
+        unique_docs[name] = {
+            'id': f"att_{att.id}",
+            'title': name,
+            'url': att.file.url,
+            'icon': 'pdf' if name.lower().endswith('.pdf') else 'file'
+        }
+        
+    for source in cited_sources:
+        name = source.publication.theme
+        if name not in unique_docs:
+            unique_docs[name] = {
+                'id': f"pub_{source.publication.id}",
+                'title': name,
+                'url': source.publication.file.url if source.publication.file else '#',
+                'icon': 'pdf'
+            }
+
     context = {
         'conversations': conversations,
         'active_conversation': conversation,
         'chat_messages': chat_messages,
         'topics': topics,
+        'conversation_documents': list(unique_docs.values()),
     }
 
     return render(request, 'chat/chat_interface.html', context)

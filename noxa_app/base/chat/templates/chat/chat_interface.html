@@ -37,7 +37,8 @@
             <select id="topicFilter">
                 <option value="">Tous les topics</option>
                 {% for topic in topics %}
-                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id == topic.id %}selected{% endif %}>
+                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id==topic.id
+                    %}selected{% endif %}>
                     {{ topic.name }}
                 </option>
                 {% endfor %}
@@ -320,17 +321,32 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
         renderMathInElement(document.body, {
             delimiters: [
-                {left: "$$", right: "$$", display: true},
-                {left: "$", right: "$", display: false},
-                {left: "\(", right: "\)", display: false},
-                {left: "\[", right: "\]", display: true}
+                { left: "$$", right: "$$", display: true },
+                { left: "$", right: "$", display: false },
+                { left: "\(", right: "\)", display: false },
+                { left: "\[", right: "\]", display: true }
             ],
             throwOnError: false
         });
+        throwOnError: false
     });
+    });
+
+    // Toggle Documents Sidebar
+    function toggleDocsList() {
+        const list = document.getElementById('docsList');
+        const chevron = document.getElementById('docsChevron');
+        if (list.style.display === 'none' || list.style.display === '') {
+            list.style.display = 'block';
+            chevron.style.transform = 'rotate(180deg)';
+        } else {
+            list.style.display = 'none';
+            chevron.style.transform = 'rotate(0deg)';
+        }
+    }
 </script>
 
 <script src="{% static 'js/chat.js' %}"></script>
