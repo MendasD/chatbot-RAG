@@ -23,7 +23,7 @@ db.sqlite3
 *.tmp
 *.swp
 *~
-# Ignorer les fichiers statiques collectés
+# Ignorer les fichiers statiques collecté
 staticfiles/
 
 # Ignorer les fichiers médias téléchargés
