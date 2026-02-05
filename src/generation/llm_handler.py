@@ -126,8 +126,9 @@ class LLMHandler:
                 error_str = str(e)
                 print(f"   ❌ Erreur génération (tentative {attempt + 1}): {error_str}")
                 
-                # Si c'est une erreur de serveur et qu'on a encore des tentatives
-                if ("502" in error_str or "503" in error_str or "Bad Gateway" in error_str) and attempt < max_retries - 1:
+                # Si c'est une erreur de serveur (502, 503, 504) et qu'on a encore des tentatives
+                is_server_error = any(code in error_str for code in ["502", "503", "504", "Bad Gateway", "Gateway Time-out"])
+                if is_server_error and attempt < max_retries - 1:
                     print(f"   🔄 Retry dans {retry_delay}s...")
                     time.sleep(retry_delay)
                     retry_delay *= 2  # Exponential backoff
