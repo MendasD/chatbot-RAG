@@ -32,12 +32,46 @@
             </button>
         </div>
 
+        <!-- Section Documents -->
+        <div class="sidebar-section">
+            <button class="section-toggle-btn" onclick="toggleDocsList()">
+                <div class="section-title-wrapper">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span>Mes Documents</span>
+                </div>
+                <svg id="docsChevron" class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+            <div class="documents-list" id="docsList">
+                {% for doc in conversation_documents %}
+                <a href="{{ doc.url }}" class="document-item" target="_blank">
+                    <div class="doc-icon-small">
+                        {% if doc.icon == 'pdf' %}
+                        <span class="pdf-tag">PDF</span>
+                        {% else %}
+                        <span class="file-tag">FILE</span>
+                        {% endif %}
+                    </div>
+                    <span class="conv-title" title="{{ doc.title }}">{{ doc.title|truncatechars:20 }}</span>
+                </a>
+                {% empty %}
+                <p class="no-conversations" style="padding: 10px; font-size: 12px;">Aucun document</p>
+                {% endfor %}
+            </div>
+        </div>
+
         <!-- Filtre par topic -->
         <div class="topic-filter">
             <select id="topicFilter">
                 <option value="">Tous les topics</option>
                 {% for topic in topics %}
-                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id == topic.id %}selected{% endif %}>
+                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id==topic.id
+                    %}selected{% endif %}>
                     {{ topic.name }}
                 </option>
                 {% endfor %}
@@ -71,38 +105,6 @@
             {% endfor %}
         </div>
 
-        <!-- Section Documents -->
-        <div class="sidebar-section">
-            <button class="section-toggle-btn" onclick="toggleDocsList()">
-                <div class="section-title-wrapper">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                    </svg>
-                    <span>Mes Documents</span>
-                </div>
-                <svg id="docsChevron" class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-            </button>
-            <div class="documents-list" id="docsList">
-                {% for doc in conversation_documents %}
-                <a href="{{ doc.url }}" class="document-item" target="_blank">
-                    <div class="doc-icon-small">
-                        {% if doc.icon == 'pdf' %}
-                        <span class="pdf-tag">PDF</span>
-                        {% else %}
-                        <span class="file-tag">FILE</span>
-                        {% endif %}
-                    </div>
-                    <span class="conv-title" title="{{ doc.title }}">{{ doc.title|truncatechars:20 }}</span>
-                </a>
-                {% empty %}
-                <p class="no-conversations" style="padding: 10px; font-size: 12px;">Aucun document</p>
-                {% endfor %}
-            </div>
-        </div>
 
         <!-- Profil utilisateur -->
         <div class="sidebar-profile">
@@ -190,7 +192,7 @@
                             {% endif %}
                         </div>
                         <div class="file-info">
-                            <span class="file-name">{{ message.file.name }}</span>
+                            <span class="file-name">{{ message.file.name|slice:"17:" }}</span>
                         </div>
                     </div>
                     {% endif %}
