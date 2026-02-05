@@ -24,10 +24,14 @@ class PublicationAdmin(admin.ModelAdmin):
 
 @admin.register(DocumentChunk)
 class DocumentChunkAdmin(admin.ModelAdmin):
-    list_display = ('publication', 'chunk_index', 'page_number', 'embedding_status', 'created')
+    list_display = ('publication', 'chunk_index', 'page_number', 'short_content', 'embedding_status', 'created')
     list_filter = ('embedding_status', 'created')
     search_fields = ('content', 'publication__theme')
     readonly_fields = ('created',)
+
+    def short_content(self, obj):
+        return obj.content[:50] + "..." if obj.content else ""
+    short_content.short_description = "Aperçu du contenu"
 admin.site.register(Collection)
 admin.site.register(CollectionPublication)
 admin.site.register(Message)

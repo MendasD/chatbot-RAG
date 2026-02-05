@@ -37,6 +37,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -200,4 +201,40 @@ LOGGING = {
             'propagate': True,
         },
     },
+}
+
+# Jazzmin Settings
+JAZZMIN_SETTINGS = {
+    "site_title": "NOXA Admin",
+    "site_header": "NOXA",
+    "site_brand": "NOXA Admin",
+    "welcome_sign": "Bienvenue sur l'administration de NOXA",
+    "copyright": "NOXA AI",
+    "search_model": ["auth.User", "base.Publication"],
+    
+    # UI Customization
+    "topmenu_links": [
+        {"name": "Home",  "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "Chat", "url": "/chat/", "new_window": True},
+    ],
+    
+    # Navigation Icons
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "base.Publication": "fas fa-file-pdf",
+        "base.DocumentChunk": "fas fa-layer-group",
+        "base.Collection": "fas fa-folder",
+        "chat.Conversation": "fas fa-comments",
+        "chat.Message": "fas fa-comment-dots",
+    },
+    
+    # Order of usage
+    "order_with_respect_to": ["chat", "base", "auth"],
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "theme": "flatly",
+    "dark_mode_theme": "darkly",
 }
