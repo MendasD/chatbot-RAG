@@ -195,13 +195,20 @@ def send_message(request, conversation_id):
         if not uploaded_files and request.FILES.get('file'):
             uploaded_files = [request.FILES.get('file')]
 
-        # Validate files are not empty
+        # Validate files are not empty and are PDFs only
         if uploaded_files:
             for f in uploaded_files:
                 if f.size == 0:
                     return JsonResponse({
                         'success': False,
-                        'error': f'Empty file: {f.name}'
+                        'error': f'Fichier vide: {f.name}'
+                    }, status=400)
+                
+                # Only accept PDF files
+                if not f.name.lower().endswith('.pdf'):
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Seuls les fichiers PDF sont acceptés. Fichier rejeté: {f.name}'
                     }, status=400)
 
         if not user_message and not uploaded_files:
