@@ -58,7 +58,8 @@ class RAGService:
         topic_id: Optional[int] = None,
         topic_name: Optional[str] = None,
         conversation_history: List[Dict] = None,
-        top_k: int = 5
+        top_k: int = 5,
+        metadata_filter: Optional[Dict] = None
     ) -> RAGResponse:
         """
         Traite une requête utilisateur avec le pipeline RAG complet via DjangoRAGService
@@ -68,7 +69,8 @@ class RAGService:
             topic_id=topic_id,
             topic_name=topic_name,
             conversation_history=conversation_history,
-            top_k=top_k
+            top_k=top_k,
+            metadata_filter=metadata_filter
         )
 
     def get_suggested_questions(self, topic_id: Optional[int] = None) -> List[str]:
