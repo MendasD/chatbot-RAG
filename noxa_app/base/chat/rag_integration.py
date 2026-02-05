@@ -258,16 +258,24 @@ class DjangoRAGService:
         )
 
     def _is_simple_query(self, query: str) -> bool:
-        """Détecte les requêtes simples (salutations, remerciements, etc.)"""
+        """Détecte les requêtes simples (salutations, remerciements, small talk)"""
         q = query.lower().strip()
-        # Salutations
-        greetings = {"salut", "bonjour", "hello", "hi", "coucou", "yo", "hey", "bonsoir"}
-        if q in greetings:
-            return True
+        # Enlever la ponctuation finale pour la comparaison
+        q_clean = q.rstrip('?.! ')
         
-        # Remerciements et courts messages
-        simple_phrases = {"merci", "thanks", "ok", "d'accord", "super", "ca marche", "ça marche"}
-        if q in simple_phrases:
+        # Salutations et polite phrases
+        simple_interactions = {
+            "salut", "bonjour", "hello", "hi", "coucou", "yo", "hey", "bonsoir",
+            "merci", "thanks", "ok", "d'accord", "super", "ca marche", "ça marche",
+            "ça va", "ca va", "comment vas-tu", "comment tu vas", "et toi",
+            "je vais bien", "tout va bien", "bien et toi", "bien merci"
+        }
+        
+        if q_clean in simple_interactions:
+            return True
+            
+        # Combinaisons communes (salut, ça va ?)
+        if any(greet in q for greet in ["salut", "bonjour", "hello"]) and any(small in q for small in ["ça va", "comment vas", "et toi"]):
             return True
         
         # Trop court (moins de 3 mots, sans ponctuation interrogative)
