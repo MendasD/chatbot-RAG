@@ -46,6 +46,7 @@ def chat_home(request):
         'topics': topics,
         'suggested_questions': suggested_questions,
         'active_conversation': None,
+        'conversation_documents': [],
     }
 
     return render(request, 'chat/chat_interface.html', context)
