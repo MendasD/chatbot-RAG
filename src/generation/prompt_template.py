@@ -214,16 +214,17 @@ Réponds uniquement par OUI ou NON."""
             system_prompt = f"""{topic_line} {context_noxa} Tu réponds en te basant UNIQUEMENT sur les documents fournis.
 
 FORMAT DE RÉPONSE OBLIGATOIRE:
-1) Réponse normale en texte.
-2) Toute équation doit être entourée par $$ ... $$ (LaTeX).
-3) À la fin, ajoute ces sections EXACTES (mêmes libellés):
-   SOURCES_USED: [doc_path_1, doc_path_2, ...]
-   IMAGES_USED: [img_path_1, img_path_2, ...]
-   EQUATIONS_USED: [latex1, latex2, ...]
-   FOLLOW_UP_QUESTIONS: [Q1; Q2; Q3; Q4; Q5]
-4) Cite toujours tes sources dans le texte: [Source: document_path, page X]
-5) Si l'info n'est pas dans les documents, dis-le clairement.
-6) Propose 3 à 5 questions courtes en FOLLOW_UP_QUESTIONS, adaptées au sujet et à l'historique.
+1) Réponse structurée et concise en texte.
+2) NE PAS écrire de phrase d'introduction sur tes sources (ex: "Mes sources sont...", "Je m'appuie sur..."). Les citations sont obligatoires dans le texte via le format [Source: ...].
+3) Toute équation doit être entourée par $$ ... $$ (LaTeX).
+4) À la fin de ta réponse, ajoute **OBLIGATOIREMENT et SILENCIEUSEMENT** ces blocs pour le système :
+   SOURCES_USED: [document1.pdf, document2.pdf]
+   IMAGES_USED: [id_image1, id_image2]
+   EQUATIONS_USED: [formule1, formule2]
+   FOLLOW_UP_QUESTIONS: [Question 1; Question 2; Question 3]
+5) Cite toujours tes sources dans le texte: [Source: document_path, page X]
+6) Si l'info n'est pas dans les documents, dis-le clairement.
+7) Propose 3 à 5 questions courtes et pertinentes en FOLLOW_UP_QUESTIONS.
 
 DOCUMENTS DE RÉFÉRENCE:
 {context}
@@ -281,12 +282,12 @@ DOCUMENTS DE RÉFÉRENCE:
         
         clean_response = response
         
-        # Patterns pour les blocs
+        # Patterns pour les blocs (supporte "TAG :" ou "TAG:")
         patterns = {
-            'sources_used': r'SOURCES_USED:\s*\[(.*?)\]',
-            'images_used': r'IMAGES_USED:\s*\[(.*?)\]',
-            'equations_used': r'EQUATIONS_USED:\s*\[(.*?)\]',
-            'follow_up_questions': r'FOLLOW_UP_QUESTIONS:\s*\[(.*?)\]'
+            'sources_used': r'SOURCES_USED\s*:\s*\[(.*?)\]',
+            'images_used': r'IMAGES_USED\s*:\s*\[(.*?)\]',
+            'equations_used': r'EQUATIONS_USED\s*:\s*\[(.*?)\]',
+            'follow_up_questions': r'FOLLOW_UP_QUESTIONS\s*:\s*\[(.*?)\]'
         }
         
         for key, pattern in patterns.items():
@@ -302,8 +303,8 @@ DOCUMENTS DE RÉFÉRENCE:
         # 3. Fallback specifically for FOLLOW_UP_QUESTIONS if not found in brackets
         if not metadata['follow_up_questions']:
             # Looks for "FOLLOW_UP_QUESTIONS:" followed by a list (bullets, numbers, or just lines)
-            # Stops at next major tag or end of string
-            fallback_pattern = r'FOLLOW_UP_QUESTIONS:\s*(.*?)(?=$|SOURCES_USED:|IMAGES_USED:|EQUATIONS_USED:)'
+            # Stops at next major tag (case insensitive) or end of string
+            fallback_pattern = r'FOLLOW_UP_QUESTIONS\s*:\s*(.*?)(?=$|SOURCES_USED\s*:|IMAGES_USED\s*:|EQUATIONS_USED\s*:)'
             match = re.search(fallback_pattern, clean_response, re.DOTALL | re.IGNORECASE)
             if match:
                 full_block = match.group(0)
