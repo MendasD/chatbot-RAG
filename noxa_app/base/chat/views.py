@@ -59,7 +59,7 @@ def conversation_view(request, conversation_id):
     )
 
     # Récupère les messages avec leurs sources (renommé pour éviter conflit avec Django messages)
-    chat_messages = conversation.messages.prefetch_related('sources__publication').all()
+    chat_messages = conversation.messages.prefetch_related('sources__publication', 'sources__attachment').all()
 
     # Autres conversations pour la sidebar
     conversations = Conversation.objects.filter(
@@ -81,7 +81,7 @@ def conversation_view(request, conversation_id):
     # Note: On utilise select_related pour éviter N+1 requêtes
     cited_sources = ChatSource.objects.filter(
         message__conversation=conversation
-    ).select_related('publication')
+    ).select_related('publication', 'attachment')
     
     # Fusionne en liste unique par nom de fichier/thème
     unique_docs = {}
@@ -97,14 +97,24 @@ def conversation_view(request, conversation_id):
         }
         
     for source in cited_sources:
-        name = source.publication.theme
-        if name not in unique_docs:
-            unique_docs[name] = {
-                'id': f"pub_{source.publication.id}",
-                'title': name,
-                'url': source.publication.file.url if source.publication.file else '#',
-                'icon': 'pdf'
-            }
+        if source.publication:
+            name = source.publication.theme
+            if name not in unique_docs:
+                unique_docs[name] = {
+                    'id': f"pub_{source.publication.id}",
+                    'title': name,
+                    'url': source.publication.file.url if source.publication.file else '#',
+                    'icon': 'pdf'
+                }
+        elif source.attachment:
+            name = source.attachment.filename
+            if name not in unique_docs:
+                unique_docs[name] = {
+                    'id': f"att_{source.attachment.id}",
+                    'title': name,
+                    'url': source.attachment.file.url,
+                    'icon': 'pdf' if name.lower().endswith('.pdf') else 'file'
+                }
 
     context = {
         'conversations': conversations,
@@ -207,7 +217,7 @@ def send_message(request, conversation_id):
 
         for f in uploaded_files:
             # Create specific attachment object
-            ChatAttachment.objects.create(
+            attachment = ChatAttachment.objects.create(
                 message=user_msg,
                 file=f,
                 file_size=f.size,
@@ -248,9 +258,14 @@ def send_message(request, conversation_id):
                     # Process sync
                     proc_service = get_document_processing_service()
                     # Add user_id metadata so we can filter/track if needed (future proofing)
+                    metadata = {
+                        "user_id": request.user.id, 
+                        "source": "chat_upload",
+                        "attachment_id": attachment.id
+                    }
                     proc_service.process_pdf(
                         temp_path, 
-                        metadata={"user_id": request.user.id, "source": "chat_upload"},
+                        metadata=metadata,
                         upload_to_pinecone=True
                     )
                     
@@ -287,31 +302,62 @@ def send_message(request, conversation_id):
             query_embedding_time=response.query_embedding_time,
             retrieval_time=response.retrieval_time,
             generation_time=response.generation_time,
-            total_time=response.total_time
+            total_time=response.total_time,
+            metadata=response.metadata if hasattr(response, 'metadata') and response.metadata else {}
         )
         
 
         # Sauvegarde les sources
         sources_data = []
+        from .models import ChatSource
         for source in response.sources:
             try:
-                publication = Publication.objects.get(id=source.publication_id)
+                pub = None
+                att = None
+                source_title = source.publication_title
+                
+                if source.publication_id:
+                    try:
+                        pub = Publication.objects.get(id=source.publication_id)
+                        source_title = pub.theme
+                    except Publication.DoesNotExist:
+                        pass
+                
+                if not pub and source.attachment_id:
+                    try:
+                        att = ChatAttachment.objects.get(id=source.attachment_id)
+                        source_title = att.filename
+                    except ChatAttachment.DoesNotExist:
+                        pass
+                
+                # if we have neither, skip (or create a generic one if you prefer)
+                if not pub and not att:
+                    logger.warning(f"Source skipping: neither publication {source.publication_id} nor attachment {source.attachment_id} found")
+                    continue
+
                 chat_source = ChatSource.objects.create(
                     message=assistant_msg,
-                    publication=publication,
+                    publication=pub,
+                    attachment=att,
                     chunk_index=source.chunk_index,
                     relevance_score=source.relevance_score,
                     excerpt=source.content[:500],
                     page_number=source.page_number
                 )
+                
                 sources_data.append({
-                    'publication_id': publication.id,
-                    'publication_title': publication.theme,
+                    'id': pub.id if pub else att.id,
+                    'publication_id': pub.id if pub else None,
+                    'attachment_id': att.id if att else None,
+                    'type': 'publication' if pub else 'attachment',
+                    'title': source_title,
+                    'url': pub.file.url if (pub and pub.file) else (att.file.url if (att and att.file) else '#'),
                     'page_number': source.page_number,
                     'relevance_score': round(source.relevance_score, 2),
                     'excerpt': source.content[:200] + '...' if len(source.content) > 200 else source.content
                 })
-            except Publication.DoesNotExist:
+            except Exception as e:
+                logger.error(f"Error creating source: {e}")
                 continue
 
         # Met à jour le titre de la conversation si c'est le premier message
@@ -338,7 +384,8 @@ def send_message(request, conversation_id):
                     'retrieval_time': round(response.retrieval_time, 2),
                     'generation_time': round(response.generation_time, 2),
                     'total_time': round(response.total_time, 2)
-                }
+                },
+                'metadata': response.metadata if hasattr(response, 'metadata') else {}
             },
             'conversation_title': conversation.title,
             'files_saved': files_saved_count

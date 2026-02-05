@@ -106,6 +106,8 @@ class PineconeInferenceUploader:
         # Basique
         metadata['document_id'] = chunk.get('document_id', '')
         metadata['document_name'] = chunk.get('document_name', '')
+        metadata['publication_id'] = chunk.get('publication_id')
+        metadata['attachment_id'] = chunk.get('attachment_id')
         metadata['chunk_index'] = chunk.get('chunk_index', 0)
         metadata['char_count'] = chunk.get('char_count', 0)
         metadata['word_count'] = chunk.get('word_count', 0)

@@ -203,7 +203,6 @@ class PDFExtractor:
             if (not metadata.get('keywords') or metadata.get('keywords') == '') and default_metadata.get('keywords'):
                 metadata['keywords'] = ','.join(default_metadata['keywords'])  # Convertit la liste en chaîne séparée par des virgules
 
-        
         return DocumentMetadata(
             title=metadata.get('title'),
             author=metadata.get('list_author') if metadata.get('list_author') != [] else (metadata.get('author') if metadata.get('author') else []),
@@ -213,8 +212,10 @@ class PDFExtractor:
             modification_date=metadata.get('modDate'),
             num_pages=len(pdf_doc),
             producer=metadata.get('producer'),
-            language=None , # PyMuPDF ne fournit pas cette info
-            file_size=taille_mo
+            language=None, # PyMuPDF ne fournit pas cette info
+            file_size=taille_mo,
+            publication_id=default_metadata.get('publication_id') if default_metadata else None,
+            attachment_id=default_metadata.get('attachment_id') if default_metadata else None
         )
     
     def _extract_toc(self, pdf_doc) -> List[TOCEntry]:

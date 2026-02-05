@@ -72,6 +72,8 @@ class DocumentMetadata:
     language: Optional[str] = None
     producer: Optional[str] = None
     file_size: Optional[int] = None # en Mo
+    publication_id: Optional[int] = None
+    attachment_id: Optional[int] = None
 
 
 @dataclass

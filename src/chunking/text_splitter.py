@@ -188,6 +188,8 @@ class SmartTextSplitter:
                         'has_formulas': len(formulas_used) > 0,
                         'document_title': doc.metadata.title,
                         'document_author': doc.metadata.author,
+                        'publication_id': doc.metadata.publication_id,
+                        'attachment_id': doc.metadata.attachment_id,
                         'image_ids': [i.get('image_id') for i in images_used if i.get('image_id')],
                         'image_paths': [i.get('image_path') for i in images_used if i.get('image_path')],
                         'images': images_used,
@@ -454,6 +456,8 @@ class SmartTextSplitter:
         metadata = {
             'document_title': doc.metadata.title,
             'document_author': ", ".join(doc.metadata.author) if doc.metadata.author else None,
+            'publication_id': doc.metadata.publication_id,
+            'attachment_id': doc.metadata.attachment_id,
         }
         if extra_metadata:
             metadata.update(extra_metadata)

@@ -22,7 +22,8 @@ logger = logging.getLogger('services.rag')
 @dataclass
 class RetrievedChunk:
     """Représente un chunk récupéré avec son score de pertinence"""
-    publication_id: int
+    publication_id: Optional[int]
+    attachment_id: Optional[int] = None
     publication_title: str
     chunk_index: int
     content: str
@@ -225,8 +226,13 @@ class DjangoRAGService:
         sources = []
         for chunk in enriched_chunks[:top_k]:
             chunk_dict = chunk.to_dict()
+            # Extract IDs from metadata if available
+            pub_id = chunk_dict['metadata'].get('publication_id')
+            att_id = chunk_dict['metadata'].get('attachment_id')
+            
             sources.append(RetrievedChunk(
-                publication_id=0,  # Non utilisé avec Pinecone
+                publication_id=int(pub_id) if pub_id else None,
+                attachment_id=int(att_id) if att_id else None,
                 publication_title=chunk_dict['document_name'],
                 chunk_index=0,
                 content=chunk_dict['text'][:500],

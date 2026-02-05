@@ -37,6 +37,7 @@ class NoxaChat {
         this.selectedFiles = []; // Changed from single file to array
 
         this.bindEvents();
+        this.processExistingMessages();
         this.scrollToBottom();
     }
 
@@ -403,8 +404,8 @@ class NoxaChat {
         let sourcesHTML = '';
         if (messageData.sources && messageData.sources.length > 0) {
             const sourceItems = messageData.sources.map(s => `
-                <a href="/publication/${s.publication_id}/" class="source-item" target="_blank">
-                    <strong>${this.escapeHtml(s.publication_title)}</strong>
+                <a href="${s.url}" class="source-item" target="_blank">
+                    <strong>${this.escapeHtml(s.title)}</strong>
                     ${s.page_number ? `<span class="source-page">Page ${s.page_number}</span>` : ''}
                     <span class="source-score">${Math.round(s.relevance_score * 100)}%</span>
                 </a>
@@ -431,7 +432,8 @@ class NoxaChat {
                 <div class="avatar-assistant">N</div>
             </div>
             <div class="message-content">
-                <div class="message-text">${this.formatMessage(messageData.content)}</div>
+                <div class="message-text">${this.formatMessage(messageData.content, messageData.sources)}</div>
+                <div class="message-extras"></div>
                 ${sourcesHTML}
                 <div class="message-feedback">
                     <button class="feedback-btn" data-type="helpful" data-id="${messageData.id}" title="Utile">
@@ -460,20 +462,98 @@ class NoxaChat {
         });
 
         this.renderMath(messageDiv);
+
+        // Render follow-up questions and images if available in metadata
+        if (messageData.metadata) {
+            const extrasContainer = messageDiv.querySelector('.message-extras');
+            this.renderImages(extrasContainer, messageData.metadata.images_used);
+            this.renderFollowUpQuestions(extrasContainer, messageData.metadata.follow_up_questions);
+        }
+
         this.scrollToBottom();
     }
 
-    formatMessage(content) {
-        // Si marked est disponible, on l'utilise pour le Markdown
+    formatMessage(content, sources = []) {
+        // Fallback pour content vide
+        if (!content) return '';
+
+        // 1. Parsing Markdown
+        let html = '';
         if (typeof marked !== 'undefined') {
-            return marked.parse(content);
+            html = marked.parse(content);
+        } else {
+            html = content
+                .split('\n\n')
+                .map(para => `<p>${para.replace(/\n/g, '<br>')}</p>`)
+                .join('');
         }
 
-        // Fallback si marked n'est pas chargé
-        return content
-            .split('\n\n')
-            .map(para => `<p>${para.replace(/\n/g, '<br>')}</p>`)
-            .join('');
+        // 2. Remplacer les citations [Source: document, page X] par des liens cliquables
+        if (sources && sources.length > 0) {
+            sources.forEach(s => {
+                // Échapper les caractères spéciaux du titre pour la regex
+                const escapedTitle = s.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                // Regex pour [Source: Titre, page X] ou [Source: Titre]
+                const pattern = new RegExp(`\\[Source:\\s*${escapedTitle}(?:,\\s*page\\s*(\\d+))?\\]`, 'g');
+
+                html = html.replace(pattern, (match, page) => {
+                    const pageStr = page ? `, p.${page}` : '';
+                    return `<a href="${s.url}" class="source-citation" target="_blank" title="${this.escapeHtml(s.title)}">[Source: ${this.escapeHtml(s.title)}${pageStr}]</a>`;
+                });
+            });
+        }
+
+        return html;
+    }
+
+    renderFollowUpQuestions(container, questions) {
+        if (!questions || !Array.isArray(questions) || questions.length === 0) return;
+
+        const followUpDiv = document.createElement('div');
+        followUpDiv.className = 'follow-up-container';
+
+        followUpDiv.innerHTML = `
+            <div class="follow-up-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                Questions suggérées :
+            </div>
+        `;
+
+        questions.forEach(q => {
+            const btn = document.createElement('button');
+            btn.className = 'follow-up-btn';
+            btn.textContent = q;
+            btn.addEventListener('click', () => {
+                this.elements.messageInput.value = q;
+                this.handleInput();
+                this.handleSubmit(new Event('submit'));
+                // Optionnel : défiler vers le bas immédiatement
+                this.scrollToBottom();
+            });
+            followUpDiv.appendChild(btn);
+        });
+
+        container.appendChild(followUpDiv);
+    }
+
+    renderImages(container, imagePaths) {
+        if (!imagePaths || !Array.isArray(imagePaths) || imagePaths.length === 0) return;
+
+        imagePaths.forEach(path => {
+            const imgContainer = document.createElement('div');
+            imgContainer.className = 'message-image-container';
+
+            // On suppose que le path est relatif à MEDIA_URL ou complet
+            const fullUrl = path.startsWith('http') || path.startsWith('/') ? path : `/media/${path}`;
+
+            imgContainer.innerHTML = `
+                <img src="${fullUrl}" class="message-image" alt="Image extraite" loading="lazy" onclick="window.open(this.src, '_blank')">
+                <div class="image-caption">Image extraite du document</div>
+            `;
+            container.appendChild(imgContainer);
+        });
     }
 
     renderMath(element) {
@@ -854,6 +934,58 @@ class NoxaChat {
             notification.style.animation = 'fadeOut 0.3s ease';
             setTimeout(() => notification.remove(), 300);
         }, 3000);
+    }
+    processExistingMessages() {
+        const assistantMessages = document.querySelectorAll('.message-assistant');
+        assistantMessages.forEach(msgDiv => {
+            const textDiv = msgDiv.querySelector('.message-text');
+            const extrasContainer = msgDiv.querySelector('.message-extras');
+
+            // 1. Handle citations in existing text
+            if (textDiv && textDiv.dataset.sources) {
+                try {
+                    const sources = JSON.parse(textDiv.dataset.sources);
+                    if (sources && sources.length > 0) {
+                        let html = textDiv.innerHTML;
+                        sources.forEach(s => {
+                            const escapedTitle = s.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            const pattern = new RegExp(`\\[Source:\\s*${escapedTitle}(?:,\\s*page\\s*(\\d+))?\\]`, 'g');
+                            html = html.replace(pattern, (match, page) => {
+                                const pageStr = page ? `, p.${page}` : '';
+                                return `<a href="${s.url}" class="source-citation" target="_blank" title="${this.escapeHtml(s.title)}">[Source: ${this.escapeHtml(s.title)}${pageStr}]</a>`;
+                            });
+                        });
+                        textDiv.innerHTML = html;
+                    }
+                } catch (e) {
+                    console.error("Error parsing sources for historical message:", e);
+                }
+            }
+
+            // 2. Handle extras (images, questions) from metadata
+            if (extrasContainer && extrasContainer.dataset.metadata) {
+                try {
+                    let metadataRaw = extrasContainer.dataset.metadata;
+                    if (metadataRaw && metadataRaw !== '{}' && metadataRaw !== 'None') {
+                        // Safely parse JSON that might be Python-formatted in data attribute
+                        let metadata;
+                        try {
+                            metadata = JSON.parse(metadataRaw);
+                        } catch (parseErr) {
+                            // Fallback for single quotes if any
+                            metadata = JSON.parse(metadataRaw.replace(/'/g, '"'));
+                        }
+
+                        if (metadata && typeof metadata === 'object') {
+                            this.renderImages(extrasContainer, metadata.images_used);
+                            this.renderFollowUpQuestions(extrasContainer, metadata.follow_up_questions);
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Could not parse metadata for message:", e);
+                }
+            }
+        });
     }
 }
 

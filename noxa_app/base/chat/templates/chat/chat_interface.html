@@ -37,7 +37,8 @@
             <select id="topicFilter">
                 <option value="">Tous les topics</option>
                 {% for topic in topics %}
-                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id == topic.id %}selected{% endif %}>
+                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id==topic.id
+                    %}selected{% endif %}>
                     {{ topic.name }}
                 </option>
                 {% endfor %}
@@ -161,9 +162,14 @@
                         </div>
                     </div>
                     {% endif %}
-                    <div class="message-text">{{ message.content|linebreaks }}</div>
+                    <div class="message-text" data-sources='[
+                        {% for s in message.sources.all %}
+                        {"id": "{{ s.publication.id|default:s.attachment.id }}", "title": "{{ s.publication.theme|default:s.attachment.filename }}", "url": "{{ s.publication.file.url|default:s.attachment.file.url|default:"#" }}", "type": "{% if s.publication %}publication{% else %}attachment{% endif %}"}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ]'>{{ message.content|linebreaks }}</div>
 
                     {% if message.role == 'assistant' %}
+                    <div class="message-extras" data-metadata='{{ message.metadata|default:"{}"|safe }}'></div>
                     <!-- Sources -->
                     {% if message.sources.all %}
                     <div class="message-sources">
@@ -177,15 +183,23 @@
                         </button>
                         <div class="sources-list" style="display: none;">
                             {% for source in message.sources.all %}
+                            {% if source.publication %}
                             <a href="{% url 'base:publication' source.publication.id %}" class="source-item"
                                 target="_blank">
                                 <strong>{{ source.publication.theme|truncatechars:50 }}</strong>
-                                {% if source.page_number %}
-                                <span class="source-page">Page {{ source.page_number }}</span>
-                                {% endif %}
-                                <span class="source-score">{{ source.relevance_score|floatformat:0 }}%</span>
-                            </a>
-                            {% endfor %}
+                                {% elif source.attachment %}
+                                <a href="{{ source.attachment.file.url }}" class="source-item" target="_blank">
+                                    <strong>{{ source.attachment.filename|truncatechars:50 }}</strong>
+                                    {% else %}
+                                    <span class="source-item">
+                                        <strong>Source inconnue</strong>
+                                        {% endif %}
+                                        {% if source.page_number %}
+                                        <span class="source-page">Page {{ source.page_number }}</span>
+                                        {% endif %}
+                                        <span class="source-score">{{ source.relevance_score|floatformat:0 }}%</span>
+                                </a>
+                                {% endfor %}
                         </div>
                     </div>
                     {% endif %}

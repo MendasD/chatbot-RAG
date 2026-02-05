@@ -1602,3 +1602,111 @@ body .footer {
 .message-user .file-size {
     color: rgba(255, 255, 255, 0.8);
 }
+/* ============================================
+   CLICKABLE ELEMENTS: QUESTIONS, IMAGES, LINKS
+   ============================================ */
+
+/* Questions follow-up */
+.follow-up-container {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    animation: fadeIn 0.5s ease-out 0.3s both;
+}
+
+.follow-up-title {
+    width: 100%;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.follow-up-btn {
+    background: var(--bg-white);
+    border: 1px solid var(--primary-blue-light);
+    color: var(--primary-blue);
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-sm);
+    text-align: left;
+}
+
+.follow-up-btn:hover {
+    background: var(--primary-blue);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-blue);
+}
+
+.follow-up-btn:active {
+    transform: translateY(0);
+}
+
+/* Citations cliquables dans le texte */
+.source-citation {
+    display: inline-flex;
+    align-items: center;
+    background: var(--primary-blue-light);
+    color: var(--primary-blue);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    margin: 0 2px;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.source-citation:hover {
+    background: var(--primary-blue);
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* Images dans les messages */
+.message-image-container {
+    margin: 16px 0;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-sm);
+    background: var(--bg-light);
+    max-width: 100%;
+}
+
+.message-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    cursor: zoom-in;
+    transition: transform 0.3s ease;
+}
+
+.message-image:hover {
+    transform: scale(1.02);
+}
+
+.image-caption {
+    padding: 10px 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: var(--bg-white);
+    border-top: 1px solid var(--border-light);
+    font-style: italic;
+}
+
+/* Scroll reveal for follow-ups */
+.message-assistant:last-child .follow-up-container {
+    display: flex;
+}
