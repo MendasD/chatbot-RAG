@@ -290,7 +290,7 @@ DOCUMENTS DE RÉFÉRENCE:
         }
         
         for key, pattern in patterns.items():
-            match = re.search(pattern, clean_response, re.DOTALL)
+            match = re.search(pattern, clean_response, re.DOTALL | re.IGNORECASE)
             if match:
                 content = match.group(1).strip()
                 # Parse la liste (split par , ou ;)
@@ -298,6 +298,32 @@ DOCUMENTS DE RÉFÉRENCE:
                 metadata[key] = items
                 # Retire le bloc de la réponse
                 clean_response = clean_response.replace(match.group(0), '')
+        
+        # 3. Fallback specifically for FOLLOW_UP_QUESTIONS if not found in brackets
+        if not metadata['follow_up_questions']:
+            # Looks for "FOLLOW_UP_QUESTIONS:" followed by a list (bullets, numbers, or just lines)
+            # Stops at next major tag or end of string
+            fallback_pattern = r'FOLLOW_UP_QUESTIONS:\s*(.*?)(?=$|SOURCES_USED:|IMAGES_USED:|EQUATIONS_USED:)'
+            match = re.search(fallback_pattern, clean_response, re.DOTALL | re.IGNORECASE)
+            if match:
+                full_block = match.group(0)
+                content = match.group(1).strip()
+                # If there are bracket remnants, clean them
+                content = content.replace('[', '').replace(']', '')
+                
+                # Split by newline and parse lines
+                lines = content.split('\n')
+                questions = []
+                for line in lines:
+                    line = line.strip()
+                    # Remove common bullet points: -, *, •, 1., 1), etc.
+                    q = re.sub(r'^([-\*\•\d\.\)]+\s*)+', '', line).strip()
+                    if q and len(q) > 10: # Minimum length for a meaningful question
+                        questions.append(q)
+                
+                if questions:
+                    metadata['follow_up_questions'] = questions
+                    clean_response = clean_response.replace(full_block, '')
         
         # Nettoyage final des espaces multiples
         clean_response = re.sub(r'\n{3,}', '\n\n', clean_response).strip()
