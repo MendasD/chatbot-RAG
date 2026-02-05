@@ -7,6 +7,8 @@ import fitz  # PyMuPDF
 from PIL import Image
 import io
 import time
+import cloudinary
+import cloudinary.uploader
 from pathlib import Path
 from typing import List, Optional, Tuple
 import json
@@ -53,6 +55,18 @@ class PDFExtractor:
         self.output_dir = Path(self.config.get('output_dir', 'data/extracted'))
         self.temp_dir = Path(self.config.get('temp_dir', 'data/temp'))
         
+        # Configuration Cloudinary
+        if os.getenv('CLOUDINARY_URL'):
+            cloudinary.config(cloudinary_url=os.getenv('CLOUDINARY_URL'))
+            print("✅ Cloudinary configuré avec CLOUDINARY_URL")
+        else:
+            cloudinary.config(
+                cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME', 'deqk7eblq'),
+                api_key=os.getenv('CLOUDINARY_API_KEY'),
+                api_secret=os.getenv('CLOUDINARY_API_SECRET'),
+                secure=True
+            )
+
         # Crée les répertoires
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.temp_dir.mkdir(parents=True, exist_ok=True)
@@ -437,10 +451,31 @@ class PDFExtractor:
             if image is None:
                 raise ValueError("Impossible d'extraire l'image (xref invalide ou données manquantes)")
             
-            # Sauvegarde l'image temporairement
+            # Sauvegarde l'image
             image_id = f"img_{page_num}_{img_idx}"
-            image_path = self.temp_dir / f"{image_id}.png"
-            image.save(image_path)
+            
+            # Upload vers Cloudinary en production ou si configuré
+            image_url = None
+            try:
+                print(f"☁️  Upload de l'image {image_id} vers Cloudinary...")
+                # On convertit l'image en bytes pour l'upload direct
+                img_byte_arr = io.BytesIO()
+                image.save(img_byte_arr, format='PNG')
+                img_byte_arr = img_byte_arr.getvalue()
+                
+                upload_result = cloudinary.uploader.upload(
+                    img_byte_arr,
+                    public_id=f"rag_extracted/{image_id}",
+                    overwrite=True,
+                    resource_type="image"
+                )
+                image_url = upload_result.get('secure_url')
+                print(f" ✅ Image uploadée: {image_url}")
+            except Exception as e:
+                print(f" ⚠️ Echec upload Cloudinary: {e}. Sauvegarde locale en fallback.")
+                image_path = self.temp_dir / f"{image_id}.png"
+                image.save(image_path)
+                image_url = str(image_path)
             
             # Génère une description avec docTR si activé
             description = ""
@@ -466,7 +501,7 @@ class PDFExtractor:
                 bbox=bbox,
                 image_id=image_id,
                 image_description=description,
-                image_path=str(image_path)
+                image_path=image_url
             )
             
         except Exception as e:
