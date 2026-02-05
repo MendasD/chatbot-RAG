@@ -37,7 +37,8 @@
             <select id="topicFilter">
                 <option value="">Tous les topics</option>
                 {% for topic in topics %}
-                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id == topic.id %}selected{% endif %}>
+                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id==topic.id
+                    %}selected{% endif %}>
                     {{ topic.name }}
                 </option>
                 {% endfor %}
@@ -71,257 +72,257 @@
             {% endfor %}
         </div>
 
-</div>
-
-<!-- Section Documents -->
-<div class="sidebar-section">
-    <button class="section-toggle-btn" onclick="toggleDocsList()">
-        <div class="section-title-wrapper">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-            </svg>
-            <span>Mes Documents</span>
-        </div>
-        <svg id="docsChevron" class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2">
-            <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
-    </button>
-    <div class="documents-list" id="docsList">
-        {% for doc in conversation_documents %}
-        <a href="{{ doc.url }}" class="document-item" target="_blank">
-            <div class="doc-icon-small">
-                {% if doc.icon == 'pdf' %}
-                <span class="pdf-tag">PDF</span>
-                {% else %}
-                <span class="file-tag">FILE</span>
-                {% endif %}
-            </div>
-            <span class="conv-title" title="{{ doc.title }}">{{ doc.title|truncatechars:20 }}</span>
-        </a>
-        {% empty %}
-        <p class="no-conversations" style="padding: 10px; font-size: 12px;">Aucun document</p>
-        {% endfor %}
-    </div>
-</div>
-
-<!-- Profil utilisateur -->
-<div class="sidebar-profile">
-    <a href="{% url 'base:user-profile' request.user.id %}" class="profile-link">
-        <div class="profile-avatar">
-            {% if request.user.photo %}
-            <img src="{{ request.user.photo.url }}" alt="{{ request.user.username }}" />
-            {% else %}
-            <div class="avatar-circle">{{ request.user.username|first|upper }}</div>
-            {% endif %}
-        </div>
-        <div class="profile-info">
-            <span class="profile-name">@{{ request.user.username }}</span>
-            <span class="profile-email">{{ request.user.email|default:""|truncatechars:20 }}</span>
-        </div>
-    </a>
-</div>
-</aside>
-
-<!-- Zone principale de chat -->
-<main class="chat-main">
-    {% if active_conversation %}
-    <!-- En-tête de la conversation -->
-    <header class="chat-header">
-        <div class="chat-header-info">
-            <h3 id="conversationTitle">{{ active_conversation.title }}</h3>
-            {% if active_conversation.topic %}
-            <span class="topic-badge">{{ active_conversation.topic.name }}</span>
-            {% endif %}
-        </div>
-    </header>
-    {% endif %}
-
-    {% if active_conversation and chat_messages %}
-    <!-- Zone des messages avec historique -->
-    <div class="messages-container" id="messagesContainer">
-        {% for message in chat_messages %}
-        <div class="message message-{{ message.role }}" data-id="{{ message.id }}">
-            <div class="message-avatar">
-                {% if message.role == 'user' %}
-                <div class="avatar-user">{{ request.user.username|slice:":1"|upper }}</div>
-                {% else %}
-                <div class="avatar-assistant">N</div>
-                {% endif %}
-            </div>
-            <div class="message-content">
-                {% if message.file %}
-                <div class="message-file">
-                    <div class="file-icon">
-                        {% if 'image' in message.file_type %}
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                            <polyline points="21 15 16 10 5 21"></polyline>
-                        </svg>
-                        {% elif 'audio' in message.file_type %}
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M9 18V5l12-2v13"></path>
-                            <circle cx="6" cy="18" r="3"></circle>
-                            <circle cx="18" cy="16" r="3"></circle>
-                        </svg>
-                        {% elif 'video' in message.file_type %}
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                        </svg>
-                        {% elif 'pdf' in message.file_type %}
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                            <polyline points="10 9 9 9 8 9"></polyline>
-                        </svg>
+        <!-- Section Documents -->
+        <div class="sidebar-section">
+            <button class="section-toggle-btn" onclick="toggleDocsList()">
+                <div class="section-title-wrapper">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span>Mes Documents</span>
+                </div>
+                <svg id="docsChevron" class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+            <div class="documents-list" id="docsList">
+                {% for doc in conversation_documents %}
+                <a href="{{ doc.url }}" class="document-item" target="_blank">
+                    <div class="doc-icon-small">
+                        {% if doc.icon == 'pdf' %}
+                        <span class="pdf-tag">PDF</span>
                         {% else %}
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                            <polyline points="13 2 13 9 20 9"></polyline>
-                        </svg>
+                        <span class="file-tag">FILE</span>
                         {% endif %}
                     </div>
-                    <div class="file-info">
-                        <span class="file-name">{{ message.file.name }}</span>
-                    </div>
+                    <span class="conv-title" title="{{ doc.title }}">{{ doc.title|truncatechars:20 }}</span>
+                </a>
+                {% empty %}
+                <p class="no-conversations" style="padding: 10px; font-size: 12px;">Aucun document</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Profil utilisateur -->
+        <div class="sidebar-profile">
+            <a href="{% url 'base:user-profile' request.user.id %}" class="profile-link">
+                <div class="profile-avatar">
+                    {% if request.user.photo %}
+                    <img src="{{ request.user.photo.url }}" alt="{{ request.user.username }}" />
+                    {% else %}
+                    <div class="avatar-circle">{{ request.user.username|first|upper }}</div>
+                    {% endif %}
                 </div>
+                <div class="profile-info">
+                    <span class="profile-name">@{{ request.user.username }}</span>
+                    <span class="profile-email">{{ request.user.email|default:""|truncatechars:20 }}</span>
+                </div>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Zone principale de chat -->
+    <main class="chat-main">
+        {% if active_conversation %}
+        <!-- En-tête de la conversation -->
+        <header class="chat-header">
+            <div class="chat-header-info">
+                <h3 id="conversationTitle">{{ active_conversation.title }}</h3>
+                {% if active_conversation.topic %}
+                <span class="topic-badge">{{ active_conversation.topic.name }}</span>
                 {% endif %}
-                <div class="message-text" data-sources='[
+            </div>
+        </header>
+        {% endif %}
+
+        {% if active_conversation and chat_messages %}
+        <!-- Zone des messages avec historique -->
+        <div class="messages-container" id="messagesContainer">
+            {% for message in chat_messages %}
+            <div class="message message-{{ message.role }}" data-id="{{ message.id }}">
+                <div class="message-avatar">
+                    {% if message.role == 'user' %}
+                    <div class="avatar-user">{{ request.user.username|slice:":1"|upper }}</div>
+                    {% else %}
+                    <div class="avatar-assistant">N</div>
+                    {% endif %}
+                </div>
+                <div class="message-content">
+                    {% if message.file %}
+                    <div class="message-file">
+                        <div class="file-icon">
+                            {% if 'image' in message.file_type %}
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
+                            {% elif 'audio' in message.file_type %}
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M9 18V5l12-2v13"></path>
+                                <circle cx="6" cy="18" r="3"></circle>
+                                <circle cx="18" cy="16" r="3"></circle>
+                            </svg>
+                            {% elif 'video' in message.file_type %}
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                            </svg>
+                            {% elif 'pdf' in message.file_type %}
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            {% else %}
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                                <polyline points="13 2 13 9 20 9"></polyline>
+                            </svg>
+                            {% endif %}
+                        </div>
+                        <div class="file-info">
+                            <span class="file-name">{{ message.file.name }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="message-text" data-sources='[
                         {% for s in message.sources.all %}
                         {"id": "{{ s.publication.id|default:s.attachment.id }}", "title": "{{ s.publication.theme|default:s.attachment.filename }}", "url": "{{ s.publication.file.url|default:s.attachment.file.url|default:"#" }}", "type": "{% if s.publication %}publication{% else %}attachment{% endif %}"}{% if not forloop.last %},{% endif %}
                         {% endfor %}
                     ]'>{{ message.content|linebreaks }}</div>
 
-                {% if message.role == 'assistant' %}
-                <div class="message-extras" data-metadata='{{ message.metadata|default:"{}"|safe }}'></div>
-                <!-- Sources -->
-                {% if message.sources.all %}
-                <div class="message-sources">
-                    <button class="sources-toggle">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                        </svg>
-                        {{ message.sources.count }} source{{ message.sources.count|pluralize }}
-                    </button>
-                    <div class="sources-list" style="display: none;">
-                        {% for source in message.sources.all %}
-                        {% if source.publication %}
-                        <a href="{% url 'base:publication' source.publication.id %}" class="source-item"
-                            target="_blank">
-                            <strong>{{ source.publication.theme|truncatechars:50 }}</strong>
-                            {% elif source.attachment %}
-                            <a href="{{ source.attachment.file.url }}" class="source-item" target="_blank">
-                                <strong>{{ source.attachment.filename|truncatechars:50 }}</strong>
-                                {% else %}
-                                <span class="source-item">
-                                    <strong>Source inconnue</strong>
-                                    {% endif %}
-                                    {% if source.page_number %}
-                                    <span class="source-page">Page {{ source.page_number }}</span>
-                                    {% endif %}
-                                    <span class="source-score">{{ source.relevance_score|floatformat:0 }}%</span>
-                            </a>
-                            {% endfor %}
+                    {% if message.role == 'assistant' %}
+                    <div class="message-extras" data-metadata='{{ message.metadata|default:"{}"|safe }}'></div>
+                    <!-- Sources -->
+                    {% if message.sources.all %}
+                    <div class="message-sources">
+                        <button class="sources-toggle">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                            {{ message.sources.count }} source{{ message.sources.count|pluralize }}
+                        </button>
+                        <div class="sources-list" style="display: none;">
+                            {% for source in message.sources.all %}
+                            {% if source.publication %}
+                            <a href="{% url 'base:publication' source.publication.id %}" class="source-item"
+                                target="_blank">
+                                <strong>{{ source.publication.theme|truncatechars:50 }}</strong>
+                                {% elif source.attachment %}
+                                <a href="{{ source.attachment.file.url }}" class="source-item" target="_blank">
+                                    <strong>{{ source.attachment.filename|truncatechars:50 }}</strong>
+                                    {% else %}
+                                    <span class="source-item">
+                                        <strong>Source inconnue</strong>
+                                        {% endif %}
+                                        {% if source.page_number %}
+                                        <span class="source-page">Page {{ source.page_number }}</span>
+                                        {% endif %}
+                                        <span class="source-score">{{ source.relevance_score|floatformat:0 }}%</span>
+                                </a>
+                                {% endfor %}
+                        </div>
                     </div>
-                </div>
-                {% endif %}
+                    {% endif %}
 
-                <!-- Feedback -->
-                <div class="message-feedback">
-                    <button class="feedback-btn {% if message.is_helpful == True %}active{% endif %}"
-                        data-type="helpful" data-id="{{ message.id }}" title="Utile">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    <!-- Feedback -->
+                    <div class="message-feedback">
+                        <button class="feedback-btn {% if message.is_helpful == True %}active{% endif %}"
+                            data-type="helpful" data-id="{{ message.id }}" title="Utile">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path
+                                    d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3">
+                                </path>
+                            </svg>
+                        </button>
+                        <button class="feedback-btn {% if message.is_helpful == False %}active{% endif %}"
+                            data-type="not-helpful" data-id="{{ message.id }}" title="Pas utile">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path
+                                    d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Zone des messages vide (pour nouvelles conversations) -->
+        <div class="messages-container" id="messagesContainer" style="display: none;"></div>
+
+        <!-- État initial - Écran de bienvenue avec logo -->
+        <div class="chat-welcome" id="chatWelcome">
+            <div class="welcome-icon">
+                <img src="{% static 'images/logo.svg' %}" alt="NOXA" class="noxa-logo-img"
+                    style="width: 80px; height: 80px;">
+            </div>
+            <h2>Bienvenue sur NOXA Chat</h2>
+            <p>Votre assistant intelligent pour explorer les mémoires et rapports académiques</p>
+        </div>
+        {% endif %}
+
+        <!-- Zone de saisie -->
+        <div class="chat-input-container">
+            <form id="chatForm" class="chat-form">
+                <div class="file-preview-container" id="filePreviewContainer" style="display: none;">
+                    <!-- Sera peuplé par JS -->
+                </div>
+
+                <!-- Options d'upload -->
+                <div class="upload-options" id="uploadOptions" style="display: none;">
+                    <label class="save-to-space-toggle">
+                        <input type="checkbox" id="saveToSpace" name="save_to_space">
+                        <span class="toggle-label">Sauvegarder dans mon espace</span>
+                    </label>
+                </div>
+
+                <div class="input-wrapper">
+                    <input type="file" id="fileInput" style="display: none;" multiple
+                        accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt">
+                    <button type="button" class="attachment-btn" id="attachBtn" title="Ajouter des fichiers">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path
-                                d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3">
+                                d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48">
                             </path>
                         </svg>
                     </button>
-                    <button class="feedback-btn {% if message.is_helpful == False %}active{% endif %}"
-                        data-type="not-helpful" data-id="{{ message.id }}" title="Pas utile">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    <textarea id="messageInput" placeholder="Posez votre question sur les mémoires académiques..."
+                        rows="1" maxlength="2000"></textarea>
+                    <button type="submit" id="sendBtn" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
-                            <path
-                                d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17">
-                            </path>
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                         </svg>
                     </button>
                 </div>
-                {% endif %}
-            </div>
+                <div class="input-info">
+                    <span id="charCount">0 / 2000</span>
+                    <span class="typing-indicator" id="typingIndicator" style="display: none;">
+                        NOXA réfléchit<span class="dots"><span>.</span><span>.</span><span>.</span></span>
+                    </span>
+                </div>
+            </form>
         </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <!-- Zone des messages vide (pour nouvelles conversations) -->
-    <div class="messages-container" id="messagesContainer" style="display: none;"></div>
-
-    <!-- État initial - Écran de bienvenue avec logo -->
-    <div class="chat-welcome" id="chatWelcome">
-        <div class="welcome-icon">
-            <img src="{% static 'images/logo.svg' %}" alt="NOXA" class="noxa-logo-img"
-                style="width: 80px; height: 80px;">
-        </div>
-        <h2>Bienvenue sur NOXA Chat</h2>
-        <p>Votre assistant intelligent pour explorer les mémoires et rapports académiques</p>
-    </div>
-    {% endif %}
-
-    <!-- Zone de saisie -->
-    <div class="chat-input-container">
-        <form id="chatForm" class="chat-form">
-            <div class="file-preview-container" id="filePreviewContainer" style="display: none;">
-                <!-- Sera peuplé par JS -->
-            </div>
-
-            <!-- Options d'upload -->
-            <div class="upload-options" id="uploadOptions" style="display: none;">
-                <label class="save-to-space-toggle">
-                    <input type="checkbox" id="saveToSpace" name="save_to_space">
-                    <span class="toggle-label">Sauvegarder dans mon espace</span>
-                </label>
-            </div>
-
-            <div class="input-wrapper">
-                <input type="file" id="fileInput" style="display: none;" multiple
-                    accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt">
-                <button type="button" class="attachment-btn" id="attachBtn" title="Ajouter des fichiers">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path
-                            d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48">
-                        </path>
-                    </svg>
-                </button>
-                <textarea id="messageInput" placeholder="Posez votre question sur les mémoires académiques..." rows="1"
-                    maxlength="2000"></textarea>
-                <button type="submit" id="sendBtn" disabled>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                </button>
-            </div>
-            <div class="input-info">
-                <span id="charCount">0 / 2000</span>
-                <span class="typing-indicator" id="typingIndicator" style="display: none;">
-                    NOXA réfléchit<span class="dots"><span>.</span><span>.</span><span>.</span></span>
-                </span>
-            </div>
-        </form>
-    </div>
-</main>
+    </main>
 </div>
 
 <!-- Modal de confirmation de suppression -->
