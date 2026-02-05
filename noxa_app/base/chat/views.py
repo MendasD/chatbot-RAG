@@ -14,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.db.models import Q
 
+from django.utils import timezone
 from .models import Conversation, ChatMessage, ChatSource, ChatFeedback
 from .services import get_rag_service
 from base.models import Topic, Publication
@@ -308,7 +309,7 @@ def send_message(request, conversation_id):
             total_time=response.total_time,
             metadata=response.metadata if hasattr(response, 'metadata') and response.metadata else {}
         )
-        
+        logger.info(f"✅ Assistant message created: ID={assistant_msg.id}")
 
         # Sauvegarde les sources
         sources_data = []

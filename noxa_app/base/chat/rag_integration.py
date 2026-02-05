@@ -41,6 +41,8 @@ class RAGResponse:
     retrieval_time: float
     generation_time: float
     total_time: float
+    metadata: Dict = field(default_factory=dict)
+    extra_info: Dict = field(default_factory=dict)
 
 
 class DjangoRAGService:
@@ -232,19 +234,38 @@ class DjangoRAGService:
         for chunk in enriched_chunks[:top_k]:
             chunk_dict = chunk.to_dict()
             # Extract IDs from metadata if available
-            pub_id = chunk_dict['metadata'].get('publication_id')
-            att_id = chunk_dict['metadata'].get('attachment_id')
+            pub_id = chunk_dict.get('metadata', {}).get('publication_id')
+            att_id = chunk_dict.get('metadata', {}).get('attachment_id')
             
+            # Ensure page_number is an integer (take first if list)
+            page_numbers = chunk_dict.get('page_numbers')
+            page_val = None
+            if page_numbers:
+                if isinstance(page_numbers, list):
+                    page_val = page_numbers[0] if page_numbers else None
+                elif isinstance(page_numbers, (int, float)):
+                    page_val = int(page_numbers)
+                elif isinstance(page_numbers, str):
+                    try:
+                        # Handle string like "138" or "[138]"
+                        cleaned = page_numbers.replace('[', '').replace(']', '').split(',')[0].strip()
+                        page_val = int(cleaned) if cleaned else None
+                    except (ValueError, IndexError):
+                        page_val = None
+
             sources.append(RetrievedChunk(
                 publication_id=int(pub_id) if pub_id else None,
                 attachment_id=int(att_id) if att_id else None,
                 publication_title=chunk_dict['document_name'],
                 chunk_index=0,
                 content=chunk_dict['text'][:500],
-                page_number=chunk_dict['page_numbers'],
+                page_number=page_val,
                 relevance_score=chunk_dict['rerank_score'] or chunk_dict['score'],
                 metadata=chunk_dict
             ))
+        
+        # Enforce metadata extract from LLM
+        extracted_metadata = result.get('extracted_metadata', {})
         
         total_time = (time.time() - total_start) * 1000
         
@@ -254,7 +275,8 @@ class DjangoRAGService:
             query_embedding_time=0.0,  # Géré par Pinecone
             retrieval_time=retrieval_time,
             generation_time=gen_time,
-            total_time=total_time
+            total_time=total_time,
+            metadata=extracted_metadata
         )
 
     def _is_simple_query(self, query: str) -> bool:

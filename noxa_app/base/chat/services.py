@@ -34,6 +34,8 @@ class RAGResponse:
     retrieval_time: float
     generation_time: float
     total_time: float
+    metadata: Dict = field(default_factory=dict)
+    extra_info: Dict = field(default_factory=dict)
 
 
 class RAGService:
