@@ -22,14 +22,14 @@ logger = logging.getLogger('services.rag')
 @dataclass
 class RetrievedChunk:
     """Représente un chunk récupéré avec son score de pertinence"""
-    publication_id: Optional[int]
-    attachment_id: Optional[int] = None
     publication_title: str
     chunk_index: int
     content: str
     page_number: Optional[int]
     relevance_score: float
     metadata: Dict
+    publication_id: Optional[int] = None
+    attachment_id: Optional[int] = None
 
 
 @dataclass
