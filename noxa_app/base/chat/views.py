@@ -195,6 +195,15 @@ def send_message(request, conversation_id):
         if not uploaded_files and request.FILES.get('file'):
             uploaded_files = [request.FILES.get('file')]
 
+        # Validate files are not empty
+        if uploaded_files:
+            for f in uploaded_files:
+                if f.size == 0:
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Empty file: {f.name}'
+                    }, status=400)
+
         if not user_message and not uploaded_files:
             return JsonResponse({
                 'success': False,
@@ -217,11 +226,11 @@ def send_message(request, conversation_id):
         from .models import ChatAttachment
         from base.models import Publication
         from .document_processing import get_document_processing_service
-
         processed_context = False
 
         for f in uploaded_files:
             # Create specific attachment object
+            # This saves the file to storage and consumes it
             attachment = ChatAttachment.objects.create(
                 message=user_msg,
                 file=f,
@@ -229,32 +238,29 @@ def send_message(request, conversation_id):
                 file_type=f.content_type
             )
             
-            # Reset file pointer for subsequent operations
-            f.seek(0)
-
             # Optional: Save to personal space (Publications)
             if save_to_space:
                 is_pdf = f.name.lower().endswith('.pdf')
                 if is_pdf:
                     try:
+                        # Re-open the saved file from attachment instead of reusing f
+                        attachment.file.open('rb')
                         Publication.objects.create(
                             user=request.user,
                             theme=f.name, # Use filename as theme/title
-                            file=f,
+                            file=attachment.file,
                             description=f"Uploaded via Chat on {timezone.now().strftime('%Y-%m-%d %H:%M')}"
                         )
+                        attachment.file.close()
                         files_saved_count += 1
                     except Exception as e:
-                        print(f"Error saving to space: {e}")
-                    
-                    # Reset file pointer after Publication save
-                    f.seek(0)
+                        logger.error(f"Error saving to space: {e}")
             
             # FAST TRACK: Process PDF immediately for RAG context
             if f.name.lower().endswith('.pdf'):
                 try:
                     logger.info(f"⚡ FAST TRACK: Processing {f.name} for immediate context...")
-                    # Save temp file for processing
+                    # Save temp file for processing using the saved attachment file
                     import os
                     from django.conf import settings
                     
@@ -262,12 +268,12 @@ def send_message(request, conversation_id):
                     os.makedirs(temp_dir, exist_ok=True)
                     temp_path = os.path.join(temp_dir, f.name)
                     
-                    # Reset file pointer before reading for temp file
-                    f.seek(0)
-                    
+                    # Use the saved file from attachment
+                    attachment.file.open('rb')
                     with open(temp_path, 'wb+') as destination:
-                        for chunk in f.chunks():
+                        for chunk in attachment.file.chunks():
                             destination.write(chunk)
+                    attachment.file.close()
                     
                     # Process sync
                     proc_service = get_document_processing_service()
