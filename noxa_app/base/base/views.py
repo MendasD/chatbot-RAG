@@ -31,6 +31,21 @@ from .models import Classes, Comments, Corrections, Courses, Specialization, Sub
 from . import utils
 from django.db.models import Count
 from django.contrib.auth import get_user_model
+from django.conf import settings
+import cloudinary
+
+# Initialize Cloudinary if configured
+if hasattr(settings, 'CLOUDINARY_STORAGE'):
+    cloudinary_config = settings.CLOUDINARY_STORAGE
+    if 'CLOUDINARY_URL' in cloudinary_config:
+        cloudinary.config(cloudinary_url=cloudinary_config['CLOUDINARY_URL'])
+    else:
+        cloudinary.config(
+            cloud_name=cloudinary_config.get('CLOUD_NAME'),
+            api_key=cloudinary_config.get('API_KEY'),
+            api_secret=cloudinary_config.get('API_SECRET'),
+            secure=True
+        )
 
 
 def home(request):
@@ -630,37 +645,54 @@ def viewPdf(request, pk: str):
     pub = get_object_or_404(Publication, id=pk)
     
     try:
-        # For Cloudinary, we try to generate a signed URL if possible
-        # to avoid 401 Unauthorized issues with private assets.
-        try:
-            import cloudinary.utils
-            # We use the raw name from the file field
-            # cloudinary-storage usually stores the public_id in .name
-            url, options = cloudinary.utils.cloudinary_url(
-                pub.file.name,
-                sign_url=True,
-                secure=True
-            )
-            logger.info(f"Serving PDF {pk} via signed Cloudinary URL")
-            return redirect(url)
-        except ImportError:
-            # Fallback if cloudinary sdk is not directly available/configured
-            file_handle = pub.file.open('rb')
-            file_content = file_handle.read()
-            file_handle.close()
-            
-            response = HttpResponse(file_content, content_type='application/pdf')
-            filename = os.path.basename(pub.file.name)
-            response['Content-Disposition'] = f'inline; filename="{filename}"'
-            return response
+        # Check if the file is on Cloudinary
+        # cloudinary-storage usually sets the URL to res.cloudinary.com
+        file_url = pub.file.url if hasattr(pub.file, 'url') else None
+        
+        if file_url and 'cloudinary.com' in file_url:
+            try:
+                import cloudinary.utils
+                
+                # Cloudinary public_id handling:
+                # - For 'image' (default for PDFs in django-cloudinary-storage), extension is omitted
+                # - For 'raw', extension is included
+                public_id = pub.file.name
+                
+                # Try to generate signed URL as 'image' (most common for PDFs here)
+                # We strip the extension for the public_id in 'image' mode
+                clean_public_id = public_id
+                if public_id.lower().endswith('.pdf'):
+                    clean_public_id = public_id[:-4]
+                
+                url, options = cloudinary.utils.cloudinary_url(
+                    clean_public_id,
+                    sign_url=True,
+                    secure=True,
+                    resource_type='image'
+                )
+                logger.info(f"Serving PDF {pk} via signed Cloudinary image URL")
+                return redirect(url)
+                
+            except Exception as sign_error:
+                logger.warning(f"Signature failed for {pk}: {sign_error}. Falling back to storage handle.")
+        
+        # Fallback: Serve via storage handle (works if credentials in settings are correct)
+        # This is slower but more reliable if signature logic above is off
+        file_handle = pub.file.open('rb')
+        file_content = file_handle.read()
+        file_handle.close()
+        
+        response = HttpResponse(file_content, content_type='application/pdf')
+        filename = os.path.basename(pub.file.name)
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
             
     except Exception as e:
         logger.error(f"Unexpected error serving PDF {pk}: {e}")
-        # Provide more context to the user in debug mode
         error_msg = str(e)
-        if "401" in error_msg:
+        if "401" in error_msg or "403" in error_msg:
             return HttpResponse(
-                "Error 401: Cloudinary Unauthorized. Please check your CLOUDINARY_URL and ensure the file is public or keys are correct.",
+                f"Error {error_msg}: Cloudinary access denied. Please verify your CLOUDINARY_URL on Railway.",
                 status=401
             )
         raise Http404(f"PDF file not found or inaccessible: {error_msg}")
