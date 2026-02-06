@@ -20,6 +20,9 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 import os
 import markdown
+import logging
+
+logger = logging.getLogger(__name__)
 
 from base.aws_service import upload_file_to_s3
 from base.forms import ClassesForm, CoursesForm, SpecializationForm
@@ -626,17 +629,20 @@ def viewPdf(request, pk: str):
     
     pub = get_object_or_404(Publication, id=pk)
     
-    pdf_path = pub.file.path
-    
-    # Check if file exists
-    if not os.path.exists(pdf_path):
-        raise Http404("PDF file not found")
-    
-    # Serve the PDF directly
-    with open(pdf_path, 'rb') as pdf_file:
-        response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+    try:
+        # Open the file using Django's storage abstraction
+        # This works correctly with both local storage and remote backends like Cloudinary
+        file_handle = pub.file.open('rb')
+        response = HttpResponse(file_handle.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="{pub.file.name}"'
+        file_handle.close()
         return response
+    except (FileNotFoundError, ValueError, NotImplementedError) as e:
+        logger.error(f"Error serving PDF {pk}: {e}")
+        raise Http404("PDF file not found or inaccessible")
+    except Exception as e:
+        logger.error(f"Unexpected error serving PDF {pk}: {e}")
+        raise Http404("Internal error while loading PDF")
 
 
 @login_required
