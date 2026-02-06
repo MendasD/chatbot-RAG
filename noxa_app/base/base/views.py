@@ -630,19 +630,40 @@ def viewPdf(request, pk: str):
     pub = get_object_or_404(Publication, id=pk)
     
     try:
-        # Open the file using Django's storage abstraction
-        # This works correctly with both local storage and remote backends like Cloudinary
-        file_handle = pub.file.open('rb')
-        response = HttpResponse(file_handle.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{pub.file.name}"'
-        file_handle.close()
-        return response
-    except (FileNotFoundError, ValueError, NotImplementedError) as e:
-        logger.error(f"Error serving PDF {pk}: {e}")
-        raise Http404("PDF file not found or inaccessible")
+        # For Cloudinary, we try to generate a signed URL if possible
+        # to avoid 401 Unauthorized issues with private assets.
+        try:
+            import cloudinary.utils
+            # We use the raw name from the file field
+            # cloudinary-storage usually stores the public_id in .name
+            url, options = cloudinary.utils.cloudinary_url(
+                pub.file.name,
+                sign_url=True,
+                secure=True
+            )
+            logger.info(f"Serving PDF {pk} via signed Cloudinary URL")
+            return redirect(url)
+        except ImportError:
+            # Fallback if cloudinary sdk is not directly available/configured
+            file_handle = pub.file.open('rb')
+            file_content = file_handle.read()
+            file_handle.close()
+            
+            response = HttpResponse(file_content, content_type='application/pdf')
+            filename = os.path.basename(pub.file.name)
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
+            
     except Exception as e:
         logger.error(f"Unexpected error serving PDF {pk}: {e}")
-        raise Http404("Internal error while loading PDF")
+        # Provide more context to the user in debug mode
+        error_msg = str(e)
+        if "401" in error_msg:
+            return HttpResponse(
+                "Error 401: Cloudinary Unauthorized. Please check your CLOUDINARY_URL and ensure the file is public or keys are correct.",
+                status=401
+            )
+        raise Http404(f"PDF file not found or inaccessible: {error_msg}")
 
 
 @login_required
