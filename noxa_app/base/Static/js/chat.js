@@ -488,6 +488,13 @@ class NoxaChat {
                 .join('');
         }
 
+        // 1.5 Nettoyage de sécurité des tags résiduels (au cas où le backend en aurait raté)
+        const tagsToStrip = ['SOURCES_USED', 'IMAGES_USED', 'EQUATIONS_USED', 'FOLLOW_UP_QUESTIONS'];
+        tagsToStrip.forEach(tag => {
+            const tagPattern = new RegExp(`${tag}\\s*:\\s*.*?(\\n|$)`, 'gi');
+            html = html.replace(tagPattern, '');
+        });
+
         // 2. Remplacer les citations [Source: document, page X] par des liens cliquables
         if (sources && sources.length > 0) {
             sources.forEach(s => {

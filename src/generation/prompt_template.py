@@ -220,11 +220,9 @@ FORMAT DE RÉPONSE OBLIGATOIRE:
 4) À la fin de ta réponse, ajoute **OBLIGATOIREMENT et SILENCIEUSEMENT** ces blocs pour le système :
    SOURCES_USED: [document1.pdf, document2.pdf]
    IMAGES_USED: [id_image1, id_image2]
-   EQUATIONS_USED: [formule1, formule2]
    FOLLOW_UP_QUESTIONS: [Question 1; Question 2; Question 3]
-5) Cite toujours tes sources dans le texte: [Source: document_path, page X]
-6) Si l'info n'est pas dans les documents, dis-le clairement.
-7) Propose 3 à 5 questions courtes et pertinentes en FOLLOW_UP_QUESTIONS.
+5) Le texte final ne doit PAS contenir les mots-clés SOURCES_USED, IMAGES_USED, etc. hors de ces blocs techniques finaux.
+6) Propose 3 à 5 questions courtes et pertinentes en FOLLOW_UP_QUESTIONS.
 
 DOCUMENTS DE RÉFÉRENCE:
 {context}
@@ -269,7 +267,8 @@ DOCUMENTS DE RÉFÉRENCE:
     @staticmethod
     def extract_metadata_blocks(response: str) -> Dict:
         """
-        Extrait et retire les blocs de métadonnées de la réponse
+        Extrait et retire les blocs de métadonnées de la réponse.
+        Gère les formats : TAG: [item1, item2] ou TAG: item1, item2
         """
         import re
         
@@ -282,51 +281,32 @@ DOCUMENTS DE RÉFÉRENCE:
         
         clean_response = response
         
-        # Patterns pour les blocs (supporte "TAG :" ou "TAG:")
-        patterns = {
-            'sources_used': r'SOURCES_USED\s*:\s*\[(.*?)\]',
-            'images_used': r'IMAGES_USED\s*:\s*\[(.*?)\]',
-            'equations_used': r'EQUATIONS_USED\s*:\s*\[(.*?)\]',
-            'follow_up_questions': r'FOLLOW_UP_QUESTIONS\s*:\s*\[(.*?)\]'
-        }
+        # 1. Extraction des blocs avec ou sans crochets
+        # Cette regex capture "TAG: content" jusqu'à la fin de la ligne ou le prochain TAG
+        tags = ['SOURCES_USED', 'IMAGES_USED', 'EQUATIONS_USED', 'FOLLOW_UP_QUESTIONS']
         
-        for key, pattern in patterns.items():
+        for key in metadata.keys():
+            tag_name = key.upper()
+            # Match le tag et son contenu jusqu'au prochain tag connu ou la fin
+            # Supporte TAG: [content] et TAG: content
+            pattern = rf'{tag_name}\s*:\s*(?:\[(.*?)\]|(.*?))(?=\s*(?:SOURCES_USED|IMAGES_USED|EQUATIONS_USED|FOLLOW_UP_QUESTIONS)|$)'
+            
             match = re.search(pattern, clean_response, re.DOTALL | re.IGNORECASE)
             if match:
-                content = match.group(1).strip()
-                # Parse la liste (split par , ou ;)
-                items = [item.strip() for item in re.split(r'[;,]', content) if item.strip()]
-                metadata[key] = items
+                full_match = match.group(0)
+                # On prend soit le contenu entre crochets (group 1) soit le reste (group 2)
+                content = (match.group(1) or match.group(2) or "").strip()
+                
+                # Parse la liste (split par , ou ; ou retour à la ligne)
+                items = [item.strip() for item in re.split(r'[;,\n]', content) if item.strip()]
+                # Nettoyage supplémentaire pour enlever les crochets résiduels si group 2 a été utilisé
+                items = [item.strip('[] ') for item in items]
+                metadata[key] = [i for i in items if i]
+                
                 # Retire le bloc de la réponse
-                clean_response = clean_response.replace(match.group(0), '')
+                clean_response = clean_response.replace(full_match, '')
         
-        # 3. Fallback specifically for FOLLOW_UP_QUESTIONS if not found in brackets
-        if not metadata['follow_up_questions']:
-            # Looks for "FOLLOW_UP_QUESTIONS:" followed by a list (bullets, numbers, or just lines)
-            # Stops at next major tag (case insensitive) or end of string
-            fallback_pattern = r'FOLLOW_UP_QUESTIONS\s*:\s*(.*?)(?=$|SOURCES_USED\s*:|IMAGES_USED\s*:|EQUATIONS_USED\s*:)'
-            match = re.search(fallback_pattern, clean_response, re.DOTALL | re.IGNORECASE)
-            if match:
-                full_block = match.group(0)
-                content = match.group(1).strip()
-                # If there are bracket remnants, clean them
-                content = content.replace('[', '').replace(']', '')
-                
-                # Split by newline and parse lines
-                lines = content.split('\n')
-                questions = []
-                for line in lines:
-                    line = line.strip()
-                    # Remove common bullet points: -, *, •, 1., 1), etc.
-                    q = re.sub(r'^([-\*\•\d\.\)]+\s*)+', '', line).strip()
-                    if q and len(q) > 10: # Minimum length for a meaningful question
-                        questions.append(q)
-                
-                if questions:
-                    metadata['follow_up_questions'] = questions
-                    clean_response = clean_response.replace(full_block, '')
-        
-        # Nettoyage final des espaces multiples
+        # Nettoyage final des espaces multiples et lignes vides
         clean_response = re.sub(r'\n{3,}', '\n\n', clean_response).strip()
         
         return {

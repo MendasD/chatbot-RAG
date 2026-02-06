@@ -1627,6 +1627,8 @@ body .footer {
     display: none;
     /* Cache par défaut, affiche uniquement pour le dernier message */
     flex-wrap: wrap;
+    justify-content: flex-end;
+    /* Align to right (user side) */
     gap: 10px;
     width: 100%;
     animation: fadeIn 0.5s ease-out 0.3s both;
@@ -1640,6 +1642,8 @@ body .footer {
     margin-bottom: 4px;
     display: flex;
     align-items: center;
+    justify-content: flex-end;
+    /* Align to right */
     gap: 6px;
 }
 
