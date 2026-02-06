@@ -221,8 +221,9 @@ FORMAT DE RÉPONSE OBLIGATOIRE:
    SOURCES_USED: [document1.pdf, document2.pdf]
    IMAGES_USED: [id_image1, id_image2]
    FOLLOW_UP_QUESTIONS: [Question 1; Question 2; Question 3]
-5) Le texte final ne doit PAS contenir les mots-clés SOURCES_USED, IMAGES_USED, etc. hors de ces blocs techniques finaux.
-6) Propose 3 à 5 questions courtes et pertinentes en FOLLOW_UP_QUESTIONS.
+5) Cite toujours tes sources dans le texte: [Source: document_path, page X]
+6) Si l'info n'est pas dans les documents, dis-le clairement.
+7) Propose 3 à 5 questions courtes et pertinentes en FOLLOW_UP_QUESTIONS.
 
 DOCUMENTS DE RÉFÉRENCE:
 {context}
