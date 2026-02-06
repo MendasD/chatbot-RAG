@@ -275,12 +275,23 @@ def send_message(request, conversation_id):
                     os.makedirs(temp_dir, exist_ok=True)
                     temp_path = os.path.join(temp_dir, f.name)
                     
-                    # Use the saved file from attachment
-                    attachment.file.open('rb')
-                    with open(temp_path, 'wb+') as destination:
-                        for chunk in attachment.file.chunks():
-                            destination.write(chunk)
-                    attachment.file.close()
+                    temp_path = os.path.join(temp_dir, f.name)
+                    
+                    # Use f directly after seeking back to start!
+                    # This is MUCH safer than trying to stream back from Cloudinary
+                    try:
+                        f.seek(0)
+                        with open(temp_path, 'wb+') as destination:
+                            for chunk in f.chunks():
+                                destination.write(chunk)
+                    except Exception as e:
+                        logger.error(f"❌ Error writing temp file from f: {e}")
+                        # Fallback to attachment.file if f fails for some reason
+                        attachment.file.open('rb')
+                        with open(temp_path, 'wb+') as destination:
+                            for chunk in attachment.file.chunks():
+                                destination.write(chunk)
+                        attachment.file.close()
                     
                     # Process sync
                     proc_service = get_document_processing_service()

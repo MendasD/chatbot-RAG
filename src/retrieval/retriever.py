@@ -170,6 +170,10 @@ class PineconeRetriever:
     def _query_pinecone(self, query: str, top_k: int, filter: Optional[Dict] = None) -> List[Dict]:
         """Query Pinecone avec embedding"""
         print(f"\n🔍 Query Pinecone (top_k={top_k})...")
+        if filter:
+            print(f"   🎯 Filtre: {filter}")
+        else:
+            print("   🔓 Aucun filtre appliqué")
         
         # Embed la query avec Pinecone Inference
         try:
