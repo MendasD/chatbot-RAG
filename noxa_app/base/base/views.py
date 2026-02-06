@@ -644,46 +644,31 @@ def viewPdf(request, pk: str):
     
     pub = get_object_or_404(Publication, id=pk)
     
+    from django.http import FileResponse
+    
     try:
-        # Check if the file is on Cloudinary
-        # cloudinary-storage usually sets the URL to res.cloudinary.com
-        file_url = pub.file.url if hasattr(pub.file, 'url') else None
+        # We serve the file directly from the server.
+        # This is the most robust way because it uses our server-side credentials
+        # and avoids any client-side signature/401 errors from Cloudinary.
         
-        if file_url and 'cloudinary.com' in file_url:
-            try:
-                import cloudinary.utils
-                
-                # Cloudinary public_id handling:
-                # - For 'image' (default for PDFs in django-cloudinary-storage), extension is omitted
-                # - For 'raw', extension is included
-                public_id = pub.file.name
-                
-                # Try to generate signed URL as 'image' (most common for PDFs here)
-                # We strip the extension for the public_id in 'image' mode
-                clean_public_id = public_id
-                if public_id.lower().endswith('.pdf'):
-                    clean_public_id = public_id[:-4]
-                
-                url, options = cloudinary.utils.cloudinary_url(
-                    clean_public_id,
-                    sign_url=True,
-                    secure=True,
-                    resource_type='image'
-                )
-                logger.info(f"Serving PDF {pk} via signed Cloudinary image URL")
-                return redirect(url)
-                
-            except Exception as sign_error:
-                logger.warning(f"Signature failed for {pk}: {sign_error}. Falling back to storage handle.")
+        # open() on a FileField handle works with both local and remote storages
+        try:
+            file_handle = pub.file.open('rb')
+        except Exception as open_err:
+            logger.error(f"Failed to open storage handle for {pk}: {open_err}")
+            raise Http404(f"File handle inaccessible: {open_err}")
+            
+        # FileResponse is efficient for streaming large files
+        response = FileResponse(file_handle, content_type='application/pdf')
         
-        # Fallback: Serve via storage handle (works if credentials in settings are correct)
-        # This is slower but more reliable if signature logic above is off
-        file_handle = pub.file.open('rb')
-        file_content = file_handle.read()
-        file_handle.close()
-        
-        response = HttpResponse(file_content, content_type='application/pdf')
-        filename = os.path.basename(pub.file.name)
+        # Use simple ASCII filename to avoid header encoding issues
+        try:
+            filename = os.path.basename(pub.file.name)
+            if not filename.lower().endswith('.pdf'):
+                filename += '.pdf'
+        except:
+            filename = f"document_{pk}.pdf"
+            
         response['Content-Disposition'] = f'inline; filename="{filename}"'
         return response
             
@@ -695,7 +680,7 @@ def viewPdf(request, pk: str):
                 f"Error {error_msg}: Cloudinary access denied. Please verify your CLOUDINARY_URL on Railway.",
                 status=401
             )
-        raise Http404(f"PDF file not found or inaccessible: {error_msg}")
+        raise Http404(f"Internal error while loading PDF: {error_msg}")
 
 
 @login_required
