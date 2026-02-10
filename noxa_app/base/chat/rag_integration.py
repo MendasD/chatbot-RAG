@@ -269,7 +269,8 @@ class DjangoRAGService:
             logger.info(f"✅ Réponse générée en {gen_time:.2f}ms")
         except Exception as e:
             logger.error(f"❌ Erreur génération: {e}")
-            answer = self._generate_fallback_response(query, enriched_chunks)
+            logger.error(traceback.format_exc())
+            answer = self._generate_fallback_response(query, retrieved_chunks) # Utilise retrieved_chunks qui a doc_url
             gen_time = (time.time() - gen_start) * 1000
         
         # 3. Convertit en format Django (RetrievedChunk)
@@ -399,20 +400,35 @@ class DjangoRAGService:
         )
     
     
-    def _generate_fallback_response(self, query: str, chunks: List) -> str:
-        """Génère une réponse de fallback si le LLM échoue"""
+    def _generate_fallback_response(self, query: str, chunks: List[Dict]) -> str:
+        """
+        Génère une réponse de synthèse de secours si le LLM échoue.
+        Utilise les chunks déjà formatés avec leurs URLs proxy.
+        """
         if not chunks:
-            return "Je n'ai pas trouvé de documents pertinents pour répondre à votre question."
+            return "Désolé, je n'ai pas pu générer une réponse synthétique et je n'ai trouvé aucun document pertinent."
         
-        response = f"Concernant votre question : '{query}'\n\n"
-        response += f"J'ai trouvé {len(chunks)} documents pertinents :\n\n"
+        response = f"Désolé, j'ai rencontré une difficulté technique pour générer une synthèse détaillée.\n\n"
+        response += f"Cependant, voici les passages les plus pertinents trouvés dans les documents pour répondre à votre question sur : **{query}**\n\n"
         
-        for i, chunk in enumerate(chunks[:3], 1):
-            chunk_dict = chunk.to_dict()
-            response += f"**{i}. {chunk_dict['document_name']}**"
-            if chunk_dict['page_numbers']:
-                response += f" (page {chunk_dict['page_numbers']})"
-            response += f"\n> {chunk_dict['text'][:200]}...\n\n"
+        for i, chunk in enumerate(chunks[:5], 1):
+            doc_name = chunk['metadata'].get('document_name', 'Document sans nom')
+            # Si le nom est une URL, on ne garde que le nom du fichier
+            if doc_name.startswith('http'):
+                doc_name = doc_name.split('/')[-1]
+            
+            page = chunk['metadata'].get('page_numbers', '')
+            url = chunk['metadata'].get('url', '#')
+            text = chunk.get('text', '')
+            
+            # Utilise un résumé plus long (800 chars) pour être plus "complet"
+            snippet = text[:800].strip() + ("..." if len(text) > 800 else "")
+            
+            page_str = f" (page {page})" if page else ""
+            response += f"### {i}. [{doc_name}]({url}){page_str}\n"
+            response += f"{snippet}\n\n"
+        
+        response += "\n*Note : Cette réponse est une sélection automatique d'extraits car le service de synthèse est momentanément indisponible.*"
         
         return response
     
