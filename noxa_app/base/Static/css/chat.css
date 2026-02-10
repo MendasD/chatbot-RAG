@@ -1708,6 +1708,17 @@ body .footer {
     transform: translateY(-1px);
 }
 
+.chat-link {
+    color: var(--primary-blue);
+    text-decoration: underline;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.chat-link:hover {
+    color: var(--primary-blue-dark);
+}
+
 /* Images dans les messages */
 .message-image-container {
     margin: 16px 0;

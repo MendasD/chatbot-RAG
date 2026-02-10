@@ -506,7 +506,7 @@ class NoxaChat {
         // 2. Remplacer les citations cliquables
         if (sources && sources.length > 0) {
             // 2.1 Remplacer les citations indexées [Source: document 1, page X]
-            html = html.replace(/\[Source:\s*(?:document|doc)\s*(\d+)(?:,\s*page\s*(\d+))?\]/gi, (match, index, page) => {
+            html = html.replace(/\[Source:\s*(?:document|doc)?\s*(\d+)(?:,\s*page\s*(\d+))?\]/gi, (match, index, page) => {
                 const i = parseInt(index) - 1;
                 if (sources[i]) {
                     const s = sources[i];
@@ -519,14 +519,38 @@ class NoxaChat {
             // 2.2 Remplacer les citations par titre [Source: Titre, page X]
             sources.forEach(s => {
                 const escapedTitle = s.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const pattern = new RegExp(`\\[Source:\\s*${escapedTitle}(?:,\\s*page\\s*(\\d+))?\\]`, 'g');
+                // Supporte aussi le cas où le titre a une extension .pdf dans le texte mais pas dans la source
+                const titleVariant = escapedTitle.replace(/\.pdf$/i, '');
 
-                html = html.replace(pattern, (match, page) => {
+                const patterns = [
+                    new RegExp(`\\[Source:\\s*${escapedTitle}(?:,\\s*page\\s*(\\d+))?\\]`, 'gi'),
+                    new RegExp(`\\[Source:\\s*${titleVariant}(?:,\\s*page\\s*(\\d+))?\\]`, 'gi')
+                ];
+
+                patterns.forEach(pattern => {
+                    html = html.replace(pattern, (match, page) => {
+                        const pageStr = page ? `, p.${page}` : (s.page_number ? `, p.${s.page_number}` : '');
+                        return `<a href="${s.url}" class="source-citation" target="_blank" title="${this.escapeHtml(s.title)}">[Source: ${this.escapeHtml(s.title)}${pageStr}]</a>`;
+                    });
+                });
+            });
+
+            // 2.3 Cas spécial : "lien_document" (pour les anciens messages ou mauvaises générations)
+            // On le relie à la première source par défaut si elle existe
+            if (sources.length > 0) {
+                const s = sources[0];
+                html = html.replace(/\[Source:\s*lien_document(?:,\s*page\s*(\d+))?\]/gi, (match, page) => {
                     const pageStr = page ? `, p.${page}` : (s.page_number ? `, p.${s.page_number}` : '');
                     return `<a href="${s.url}" class="source-citation" target="_blank" title="${this.escapeHtml(s.title)}">[Source: ${this.escapeHtml(s.title)}${pageStr}]</a>`;
                 });
-            });
+            }
         }
+
+        // 3. Linkifier les URLs standards (http/https) qui ne sont pas déjà des liens
+        const urlPattern = /(?<!href="|src=")(https?:\/\/[^\s<]+)/gi;
+        html = html.replace(urlPattern, (url) => {
+            return `<a href="${url}" target="_blank" class="chat-link">${url}</a>`;
+        });
 
         return html;
     }
