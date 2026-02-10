@@ -229,11 +229,10 @@ class DjangoRAGService:
             try:
                 if pub_id:
                     # Lien proxy pour les publications
-                    doc_url = f"/viewPdf/{pub_id}/"
+                    doc_url = f"/pdf/{pub_id}/"
                 elif att_id:
-                    # Lien direct Cloudinary pour les attachments
-                    att = ChatAttachment.objects.get(id=att_id)
-                    doc_url = att.file.url
+                    # Lien proxy pour les attachments (sécurisé via presigned URL)
+                    doc_url = f"/chat/attachment/{att_id}/"
             except Exception as e:
                 logger.warning(f"Could not fetch URL for doc: {e}")
 

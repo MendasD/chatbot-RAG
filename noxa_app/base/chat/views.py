@@ -7,7 +7,7 @@ import uuid
 import logging
 import traceback
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect, Http404
 from django.views.decorators.http import require_http_methods, require_POST, require_GET
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -18,6 +18,7 @@ from django.utils import timezone
 from .models import Conversation, ChatMessage, ChatSource, ChatFeedback
 from .services import get_rag_service
 from base.models import Topic, Publication
+from base.cloud_service import get_signed_url
 
 logger = logging.getLogger('services.rag')
 
@@ -397,9 +398,9 @@ def send_message(request, conversation_id):
                 
                 # Build URL that goes through Django view (which generates presigned URL)
                 if pub:
-                    source_url = f'/viewPdf/{pub.id}/'
+                    source_url = f'/pdf/{pub.id}/'
                 elif att:
-                    source_url = att.file.url  # Attachments are on Cloudinary, no presigning needed
+                    source_url = f'/chat/attachment/{att.id}/'
                 else:
                     source_url = '#'
                 
@@ -644,3 +645,29 @@ def conversation_history(request, conversation_id):
         'total_pages': paginator.num_pages,
         'current_page': page
     })
+
+
+@login_required
+def viewChatAttachment(request, pk):
+    """
+    Vue sécurisée pour servir les pièces jointes du chat via S3.
+    Génère une URL présignée et redirige l'utilisateur.
+    """
+    from .models import ChatAttachment
+    attachment = get_object_or_404(ChatAttachment, id=pk)
+    
+    try:
+        # On extrait la clé S3 de l'URL du fichier (Stocké dans chat_attachments/)
+        # file.name contient le chemin relatif par rapport à MEDIA_ROOT
+        s3_key = attachment.file.name
+        
+        # Génère l'URL présignée
+        url = get_signed_url(s3_key, expiration=3600)
+        
+        if url is None:
+            raise Http404("Fichier non trouvé sur S3")
+            
+        return HttpResponseRedirect(url)
+    except Exception as e:
+        logger.error(f"Erreur lors de la génération de l'URL pour l'attachment {pk}: {e}")
+        raise Http404(f"Erreur technique lors de l'accès au fichier : {str(e)}")

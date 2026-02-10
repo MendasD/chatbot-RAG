@@ -24,6 +24,7 @@ urlpatterns = [
     # Utilitaires
     path('api/suggestions/', views.get_suggestions, name='get_suggestions'),
     path('api/publications/search/', views.search_publications, name='search_publications'),
+    path('attachment/<int:pk>/', views.viewChatAttachment, name='view_attachment'),
     
     # Traitement de documents (Admin)
     path('admin/documents/', doc_views.document_processing_dashboard, name='document_processing'),
