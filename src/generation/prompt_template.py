@@ -102,6 +102,9 @@ Réponds uniquement par OUI ou NON."""
             # Informations de source
             doc_path = metadata.get('document_path') or metadata.get('document_name') or 'Document inconnu'
             pages = metadata.get('page_numbers', 'Page inconnue')
+            doc_url = metadata.get('url')
+            
+            url_str = f" [Lien: {doc_url}]" if doc_url else ""
             
             # Format pages
             if isinstance(pages, list):
@@ -157,7 +160,7 @@ Réponds uniquement par OUI ou NON."""
             # Construction du bloc
             context_parts.append(
                 f"--- Document {i} ---\n"
-                f"Source: {doc_path}, {pages_str}{score_str}\n"
+                f"Source: {doc_path}, {pages_str}{url_str}{score_str}\n"
                 f"Contenu:\n{text}\n"
                 f"{images_str}"
                 f"{formulas_str}\n"
@@ -233,19 +236,21 @@ Réponds uniquement par OUI ou NON."""
             topic_line = f"Tu es spécialisé en {topic}." if topic else "Tu es un assistant expert."
             system_prompt = f"""{topic_line} {context_noxa} Tu réponds en te basant UNIQUEMENT sur les documents fournis.
             
-FORMAT DE RÉPONSE OBLIGATOIRE:
+FORMAT DE RÉPONSE OBLIGATOIRE :
 1) Réponse structurée et concise en texte.
-2) NE PAS écrire de phrase d'introduction sur tes sources (ex: "Mes sources sont...", "Je m'appuie sur..."). Les citations sont obligatoires dans le texte via le format [Source: ...].
+2) NE PAS écrire de phrase d'introduction sur tes sources (ex: "Mes sources sont...", "Je m'appuie sur..."). Les citations sont obligatoires dans le texte via le format [Source: Nom_Document, page X].
 3) Toute équation doit être entourée par $$ ... $$ (LaTeX).
-4) À la fin de ta réponse, ajoute ces blocs techniques :
+4) À la fin de ta réponse, ajoute ces blocs techniques (NE PAS LES TRADUIRE) :
    SOURCES_USED: [nom1.pdf, nom2.pdf]
    IMAGES_USED: [id1, id2]
    FOLLOW_UP_QUESTIONS: [Question 1?; Question 2?; Question 3?]
 5) **IMPORTANT** : Donne les vrais noms de fichiers dans SOURCES_USED (ex: "rapport.pdf").
-6) **CITE TOUJOURS** tes sources dans le texte avec directement le lien du document style [lien_document].
+6) **CITE TOUJOURS** tes sources dans le texte : utilise soit [Source: Nom_Document, page X] soit directement le nom du document entre crochets.
 7) Si l'info n'est pas dans les documents, dis-le clairement.
 8) Propose 3 à 5 questions courtes et pertinentes dans FOLLOW_UP_QUESTIONS.
-8) **NE PAS lister les images disponibles** dans ton texte de réponse. Si tu utilises une image, mentionne-la discrètement ou laisse le système l'afficher via IMAGES_USED.
+9) **NE PAS lister les images disponibles** dans ton texte de réponse.
+
+**ATTENTION :** Les mots SOURCES_USED, IMAGES_USED et FOLLOW_UP_QUESTIONS doivent rester en ANGLAIS pour le système.
 
 DOCUMENTS DE RÉFÉRENCE :
 {context}

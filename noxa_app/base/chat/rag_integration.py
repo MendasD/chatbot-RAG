@@ -212,10 +212,30 @@ class DjangoRAGService:
             enriched_chunks = []
             retrieval_time = (time.time() - retrieval_start) * 1000
         
+        from noxa_app.base.base.models import Publication, ChatAttachment
+
         # Convertit les EnrichedChunk en format dict pour le LLM
         retrieved_chunks = []
         for chunk in enriched_chunks:
             chunk_dict = chunk.to_dict()
+            metadata = chunk_dict.get('metadata', {})
+            
+            # Récupère l'URL réelle du document
+            pub_id = metadata.get('publication_id')
+            att_id = metadata.get('attachment_id')
+            doc_url = None
+            
+            try:
+                if pub_id:
+                    # Lien proxy pour les publications
+                    doc_url = f"/viewPdf/{pub_id}/"
+                elif att_id:
+                    # Lien direct Cloudinary pour les attachments
+                    att = ChatAttachment.objects.get(id=att_id)
+                    doc_url = att.file.url
+            except Exception as e:
+                logger.warning(f"Could not fetch URL for doc: {e}")
+
             retrieved_chunks.append({
                 'id': chunk_dict['chunk_id'],
                 'score': chunk_dict['rerank_score'] or chunk_dict['score'],
@@ -227,12 +247,14 @@ class DjangoRAGService:
                     'formulas_latex': chunk_dict['formulas_latex'],
                     'image_paths': chunk_dict['image_paths'],
                     'has_formulas': chunk_dict['has_formulas'],
-                    'has_images': chunk_dict['has_images']
+                    'has_images': chunk_dict['has_images'],
+                    'url': doc_url
                 }
             })
         
         # 2. Génération de la réponse avec le LLM
         gen_start = time.time()
+        result = {'response': '', 'extracted_metadata': {}}
         try:
             result = self.llm_handler.generate_response(
                 question=query,

@@ -539,7 +539,9 @@ class NoxaChat {
             // On le relie à la première source par défaut si elle existe
             if (sources.length > 0) {
                 const s = sources[0];
-                html = html.replace(/\[Source:\s*lien_document(?:,\s*page\s*(\d+))?\]/gi, (match, page) => {
+                // Match [Source: lien_document] ou juste [lien_document]
+                const pattern = /\[(?:Source:\s*)?lien_document(?:,\s*page\s*(\d+))?\]/gi;
+                html = html.replace(pattern, (match, page) => {
                     const pageStr = page ? `, p.${page}` : (s.page_number ? `, p.${s.page_number}` : '');
                     return `<a href="${s.url}" class="source-citation" target="_blank" title="${this.escapeHtml(s.title)}">[Source: ${this.escapeHtml(s.title)}${pageStr}]</a>`;
                 });

@@ -53,7 +53,8 @@ class EnrichedChunk:
             'has_images': self.has_images,
             'image_ids': self.image_ids,
             'image_paths': self.image_paths,
-            'num_images': self.num_images
+            'num_images': self.num_images,
+            'metadata': self.metadata
         }
 
 
