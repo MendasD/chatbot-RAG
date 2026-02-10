@@ -37,8 +37,9 @@ import cloudinary
 from .cloud_service import upload_file_cloudinary, upload_file_to_s3, get_signed_url
 import re
 import requests
-from chat.document_processing import get_document_processing_service
-import tempfile
+# from chat.document_processing import get_document_processing_service
+# import tempfile
+
 
 def home(request):
     """
@@ -529,18 +530,13 @@ def createPublication(request):
         
             # Handle topic
             topic, _ = Topic.objects.get_or_create(name=topic_name)
+            # Preparing the default metadata for RAG Service (Commented out)
+            # default_metadata = {}
+            # default_metadata['subject'] = topic_name
 
-            # Preparing the default metadata for RAG Service
-            default_metadata = {}
-            default_metadata['subject'] = topic_name
-
-            # save the file in the cloud and get the url
-            # file_url = upload_file_cloudinary(file=file, file_type="raw", folder="documents/memoires", public_id=file_name_without_extension  )
-
-            # Lire le contenu du fichier AVANT l'upload S3
-            file_content = file.read()
-            file.seek(0)  # Remettre au début pour S3
-            
+            # Lire le contenu du fichier AVANT l'upload S3 (Commented out)
+            # file_content = file.read()
+            # file.seek(0)  # Remettre au début pour S3
             # Upload to aws
             try:
                 file_url = upload_file_to_s3(file=file, s3_path=f"documents/memoires/{file_basename}", public=True)
@@ -548,9 +544,6 @@ def createPublication(request):
             except Exception as e:
                 print(f"Error uploading file to S3: {e}")
                 messages.error(request, f"Erreur lors de l'upload du fichier: {e}")
-                # Nettoyer le fichier temporaire
-                if temp_path and os.path.exists(temp_path):
-                    os.remove(temp_path)
                 return render(request, 'base/publication_form.html')
             
 
@@ -567,62 +560,60 @@ def createPublication(request):
                 user=request.user  # assuming current user is main author
             )
 
-            default_metadata['title'] = theme
-            default_metadata['author'] = [request.user.username]
+            # default_metadata['title'] = theme
+            # default_metadata['author'] = [request.user.username]
             # Handle additional authors
             if authors_str:
                 author_usernames = [username.strip() for username in authors_str.split(',') if username.strip()]
                 for username in author_usernames:
                     try:
-                        default_metadata['author'].append(username)
                         author = get_user_model().objects.get(username=username)
                         publication.authors.add(author)
                     except get_user_model().DoesNotExist:
+                        # default_metadata['author'].append(username)
                         pass  # Skip if author doesn't exist
             
             # Handle tags
-            default_metadata['keywords'] = []
+            # default_metadata['keywords'] = []
             if tags_str:
                 tag_names = [tag_name.strip() for tag_name in tags_str.split(',') if tag_name.strip()]
                 for tag_name in tag_names:
-                    default_metadata['keywords'].append(tag_name)
+                    # default_metadata['keywords'].append(tag_name)
                     tag, _ = Tag.objects.get_or_create(name=tag_name)
                     publication.tags.add(tag)
 
             messages.success(request, 'Publication created successfully!')
             
-            # Process document for Pinecone
-            temp_path = None
-            try:
-                print("Starting processing for pinecone")
-                # Créer le fichier temporaire depuis le fichier Django réinitialisé
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                    tmp.write(file_content)
-                    temp_path = tmp.name
-                print(f"File saved at: {temp_path}")
-                
-                # Process the document for the vectorial database
-                processing_service = get_document_processing_service()
-                processing_service.process_pdf(
-                    pdf_path=temp_path,
-                    uploaded_url=file_url,
-                    metadata=default_metadata,
-                    document_name_without_ext=file_name_without_extension
-                    )
-                print("Pinecone processing completed")
-
-            except Exception as e:
-                print(f"Error processing document: {e}")
-                messages.warning(request, f"Document publié mais erreur lors de l'indexation: {e}")
-            
-            finally:
-                # Nettoyer le fichier temporaire
-                if temp_path and os.path.exists(temp_path):
-                    try:
-                        os.remove(temp_path)
-                        print(f"Temp file {temp_path} deleted successfully")
-                    except Exception as e:
-                        print(f"Error deleting temp file: {e}")
+            # Process document for Pinecone (Commented out)
+            # temp_path = None
+            # try:
+            #     print("Starting processing for pinecone")
+            #     # Créer le fichier temporaire depuis le fichier Django réinitialisé
+            #     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            #         tmp.write(file_content)
+            #         temp_path = tmp.name
+            #     print(f"File saved at: {temp_path}")
+            #     
+            #     # Process the document for the vectorial database
+            #     processing_service = get_document_processing_service()
+            #     processing_service.process_pdf(
+            #         pdf_path=temp_path,
+            #         uploaded_url=file_url,
+            #         metadata=default_metadata,
+            #         document_name_without_ext=file_name_without_extension
+            #         )
+            #     print("Pinecone processing completed")
+            # except Exception as e:
+            #     print(f"Error processing document: {e}")
+            #     messages.warning(request, f"Document publié mais erreur lors de l'indexation: {e}")
+            # finally:
+            #     # Nettoyer le fichier temporaire
+            #     if temp_path and os.path.exists(temp_path):
+            #         try:
+            #             os.remove(temp_path)
+            #             print(f"Temp file {temp_path} deleted successfully")
+            #         except Exception as e:
+            #             print(f"Error deleting temp file: {e}")
             
             return redirect('base:publication', pk=publication.pk)
         else:
