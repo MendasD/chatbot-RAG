@@ -462,8 +462,14 @@
           <span style="margin-left:10px; color:#64748b;">• Source: {{ subject.source|default:"—" }}</span>
         </div>
         <div style="color:#64748b; font-size:0.9rem;">
-          <span>Author: {% if subject.author %}<a href="{% url 'base:user-profile' subject.author.id %}">@{{
-              subject.author.username }}</a>{% else %}Anonymous{% endif %}</span>
+          <span>
+            Author: 
+            {% if subject.author %}
+              <a href="{% url 'base:user-profile' subject.author.id %}"> @{{ subject.author.username }}</a>
+            {% else %}
+              Anonymous
+            {% endif %}
+          </span>
         </div>
       </div>
 
