@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
+from botocore.config import Config
 
 # Charger le .env (priorité aux variables d'environnement système)
 # On ne charge le .env que si on n'est pas déjà dans un environnement configuré (ex: local dev)
@@ -34,7 +35,8 @@ s3 = boto3.client(
     "s3",
     aws_access_key_id=AWS_ACCESS_KEY_ID,
     aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-    region_name=region
+    region_name=region,
+    config=Config(signature_version='s3v4')
 )
 
 # get a pre-signed url for a pdf
@@ -52,7 +54,7 @@ def get_signed_url(s3_key, expiration=3600):
         )
         return url
     except Exception as e:
-        print(f"Error generating signed URL: {e}")
+        print(f"[ERROR] S3 generate_presigned_url failed for key {s3_key}: {e}")
         return None
 
 
