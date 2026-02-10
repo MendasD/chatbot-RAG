@@ -543,7 +543,7 @@ class Subjects(models.Model):
     specialization = models.ForeignKey(Specialization, on_delete=models.CASCADE, null=True, blank=True)
     course = models.ForeignKey(Courses, on_delete=models.CASCADE, null=True, blank=True)
     semester = models.IntegerField(null=True, blank=True)
-    academic_year = models.CharField(max_length=7, null=True, blank=True)
+    academic_year = models.CharField(max_length=9, null=True, blank=True)
     author = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
     source = models.CharField(max_length=200, null=True, blank=True)
