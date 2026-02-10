@@ -229,10 +229,10 @@ Réponds uniquement par OUI ou NON."""
         # System prompt
         if system_prompt is None:
             context = PromptTemplates.format_context(retrieved_chunks)
-            context_noxa = f"Tu es Noxa AI, l'IA intégrée dans Noxa. Noxa est une application permettant d'aider les les étudiants et chercheurs dans la rédaction de leurs documents académiques et scientifiques, sur divers domaines tels que la mathématiques, l'économie, la statistique, la physique, la chimie, la biologie, etc. Tu dois toujours répondre dans la langue de l'utilisateur."
+            context_noxa = f"Tu es Noxa AI, l'IA intégrée dans Noxa. Noxa est une application permettant d'aider les les étudiants et chercheurs dans la rédaction de leurs documents académiques et scientifiques."
             topic_line = f"Tu es spécialisé en {topic}." if topic else "Tu es un assistant expert."
-            system_prompt = f"""{topic_line} {context_noxa} Tu réponds en te basant UNIQUEMENT sur les documents fournis. Adapte le style du texte selon les besoins
-
+            system_prompt = f"""{topic_line} {context_noxa} Tu réponds en te basant UNIQUEMENT sur les documents fournis.
+            
 FORMAT DE RÉPONSE OBLIGATOIRE:
 1) Réponse structurée et concise en texte.
 2) NE PAS écrire de phrase d'introduction sur tes sources (ex: "Mes sources sont...", "Je m'appuie sur..."). Les citations sont obligatoires dans le texte via le format [Source: ...].
@@ -242,12 +242,12 @@ FORMAT DE RÉPONSE OBLIGATOIRE:
    IMAGES_USED: [id1, id2]
    FOLLOW_UP_QUESTIONS: [Question 1?; Question 2?; Question 3?]
 5) **IMPORTANT** : Donne les vrais noms de fichiers dans SOURCES_USED (ex: "rapport.pdf").
-6) **CITE TOUJOURS** tes sources dans le texte avec [Source: Nom_Document, page X]. N'utilise JAMAIS "lien_document".
+6) **CITE TOUJOURS** tes sources dans le texte avec directement le lien du document style [lien_document].
 7) Si l'info n'est pas dans les documents, dis-le clairement.
 8) Propose 3 à 5 questions courtes et pertinentes dans FOLLOW_UP_QUESTIONS.
 8) **NE PAS lister les images disponibles** dans ton texte de réponse. Si tu utilises une image, mentionne-la discrètement ou laisse le système l'afficher via IMAGES_USED.
 
-DOCUMENTS DE RÉFÉRENCE:
+DOCUMENTS DE RÉFÉRENCE :
 {context}
 """
         
@@ -305,14 +305,26 @@ DOCUMENTS DE RÉFÉRENCE:
         clean_response = response
         
         # 1. Extraction des blocs avec ou sans crochets
-        # Cette regex capture "TAG: content" jusqu'à la fin de la ligne ou le prochain TAG
-        tags = ['SOURCES_USED', 'IMAGES_USED', 'EQUATIONS_USED', 'FOLLOW_UP_QUESTIONS']
+        # On définit les tags et leurs variantes possibles (notamment traduites)
+        tag_map = {
+            'sources_used': ['SOURCES_USED', 'SOURCES_UTILISEES', 'SOURCES_UTILISEE', 'SOURCE_USED'],
+            'images_used': ['IMAGES_USED', 'IMAGES_UTILISEES', 'IMAGES_UTILISEE', 'IMAGE_USED'],
+            'equations_used': ['EQUATIONS_USED', 'FORMULES_UTILISEES', 'EQUATION_USED'],
+            'follow_up_questions': ['FOLLOW_UP_QUESTIONS', 'FOLLOW_UP_QUESTION', 'QUESTIONS_SUGGEREES', 'SUITE_DE_QUESTION', 'SUITE_DE_QUESTIONS']
+        }
         
-        for key in metadata.keys():
-            tag_name = key.upper()
+        # Liste plate de tous les tags pour la regex de lookahead
+        all_tags = []
+        for variants in tag_map.values():
+            all_tags.extend(variants)
+        
+        for key, variants in tag_map.items():
+            # Crée un pattern pour toutes les variantes du tag
+            tag_pattern = '|'.join(variants)
+            lookahead_pattern = '|'.join(all_tags)
+            
             # Match le tag et son contenu jusqu'au prochain tag connu ou la fin
-            # Supporte TAG: [content] et TAG: content
-            pattern = rf'{tag_name}\s*:\s*(?:\[(.*?)\]|(.*?))(?=\s*(?:SOURCES_USED|IMAGES_USED|EQUATIONS_USED|FOLLOW_UP_QUESTIONS)|$)'
+            pattern = rf'(?:{tag_pattern})\s*:\s*(?:\[(.*?)\]|(.*?))(?=\s*(?:{lookahead_pattern})|$)'
             
             match = re.search(pattern, clean_response, re.DOTALL | re.IGNORECASE)
             if match:
@@ -330,8 +342,13 @@ DOCUMENTS DE RÉFÉRENCE:
                 clean_response = clean_response.replace(full_match, '')
         
         # Nettoyage final des espaces multiples, lignes vides et symboles résiduels (comme **)
+        # On supprime aussi les titres de blocs vides comme "BLOC DE FONCTIONS" ou "MÉTADONNÉES"
+        clean_response = re.sub(r'(?i)\n*.*?(?:BLOC DE FONCTIONS|MÉTADONNÉES|VOICI LA RÉPONSE RÉFORMATÉE|MÉTA-DONNÉES).*?\n*', '\n\n', clean_response)
         clean_response = re.sub(r'\n{3,}', '\n\n', clean_response)
         clean_response = re.sub(r'\s*\**\s*$', '', clean_response).strip()
+        
+        # Si la réponse commence par "Voici...", on le supprime (fallback)
+        clean_response = re.sub(r'^(?i)Voici la réponse (?:réformatée|générée)?\s*:\s*', '', clean_response).strip()
         
         return {
             'clean_response': clean_response,
