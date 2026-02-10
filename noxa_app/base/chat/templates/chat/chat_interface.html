@@ -70,7 +70,8 @@
             <select id="topicFilter">
                 <option value="">Tous les topics</option>
                 {% for topic in topics %}
-                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id == topic.id %}selected{% endif %}>
+                <option value="{{ topic.id }}" {% if active_conversation and active_conversation.topic_id==topic.id
+                    %}selected{% endif %}>
                     {{ topic.name }}
                 </option>
                 {% endfor %}
@@ -197,7 +198,7 @@
                     {% endif %}
                     <div class="message-text" data-sources='[
                         {% for s in message.sources.all %}
-                        {"id": "{{ s.publication.id|default:s.attachment.id }}", "title": "{{ s.publication.theme|default:s.attachment.filename }}", "url": "{{ s.publication.file.url|default:s.attachment.file.url|default:"#" }}", "type": "{% if s.publication %}publication{% else %}attachment{% endif %}"}{% if not forloop.last %},{% endif %}
+                        {"id": "{{ s.publication.id|default:s.attachment.id }}", "title": "{{ s.publication.theme|default:s.attachment.filename }}", "url": "{% if s.publication %}/viewPdf/{{ s.publication.id }}/{% else %}{{ s.attachment.file.url }}{% endif %}", "type": "{% if s.publication %}publication{% else %}attachment{% endif %}"}{% if not forloop.last %},{% endif %}
                         {% endfor %}
                     ]'>{{ message.content|linebreaks }}</div>
 
@@ -217,8 +218,7 @@
                         <div class="sources-list" style="display: none;">
                             {% for source in message.sources.all %}
                             {% if source.publication %}
-                            <a href="{% url 'base:publication' source.publication.id %}" class="source-item"
-                                target="_blank">
+                            <a href="/viewPdf/{{ source.publication.id }}/" class="source-item" target="_blank">
                                 <strong>{{ source.publication.theme|truncatechars:50 }}</strong>
                                 {% elif source.attachment %}
                                 <a href="{{ source.attachment.file.url }}" class="source-item" target="_blank">
