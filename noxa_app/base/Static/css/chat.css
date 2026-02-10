@@ -1624,14 +1624,15 @@ body .footer {
 /* Questions follow-up */
 .follow-up-container {
     margin-top: 24px;
+    margin-left: auto;
+    /* Pousse le conteneur vers la droite */
     display: none;
     flex-direction: column;
     align-items: flex-end;
-    /* Aligné à droite */
-    align-self: stretch;
-    /* Prend toute la largeur disponible pour pouvoir s'aligner à droite du parent */
+    align-self: flex-end;
     gap: 10px;
-    width: 100%;
+    max-width: 85%;
+    /* Limite la largeur comme les messages utilisateur */
     animation: fadeIn 0.5s ease-out 0.3s both;
 }
 
@@ -1662,7 +1663,7 @@ body .footer {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: var(--shadow-sm);
     text-align: right;
-    max-width: 85%;
+    width: 100%;
     line-height: 1.4;
 }
 
