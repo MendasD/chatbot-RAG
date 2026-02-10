@@ -6,7 +6,7 @@
 # - Extrait les métadonnées
 # - Assemble le document final
 
-
+# PLUS UTILISE
 
 """
 Extracteur principal de PDF

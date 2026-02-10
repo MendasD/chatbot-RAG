@@ -59,9 +59,13 @@ class Publication(models.Model):
     )
     file = models.FileField(
         upload_to=utils.pdfUploadPath, 
-        validators=[utils.validatePdf]
+        validators=[utils.validatePdf], 
+        help_text="Upload a PDF file",
+        blank=True, 
+        null=True
     )
-    
+    file_url = models.URLField(blank=True, null=True)
+    file_basename = models.CharField(max_length=100, blank=True, null=True)
     description = models.TextField(null=True, blank=True)
     summary = models.TextField(null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)
@@ -539,7 +543,7 @@ class Subjects(models.Model):
     specialization = models.ForeignKey(Specialization, on_delete=models.CASCADE, null=True, blank=True)
     course = models.ForeignKey(Courses, on_delete=models.CASCADE, null=True, blank=True)
     semester = models.IntegerField(null=True, blank=True)
-    academic_year = models.CharField(max_length=7, null=True, blank=True)
+    academic_year = models.CharField(max_length=9, null=True, blank=True)
     author = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
     source = models.CharField(max_length=200, null=True, blank=True)

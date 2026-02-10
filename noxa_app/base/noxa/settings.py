@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 import os
+import dj_database_url
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -26,25 +27,32 @@ SECRET_KEY = 'django-insecure-8#-vp#m#wl*7@5)v6$x9hy-_bpg80axt1p$(hmc5x__nhvvnx5
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.railway.app']
+
+# CSRF settings for Railway
+CSRF_TRUSTED_ORIGINS = ['https://*.railway.app', 'https://noxa-production.up.railway.app']
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    #'noxa',
     'base.apps.BaseConfig',
     'chat.apps.ChatConfig',  # App Chatbot RAG
+    'cloudinary_storage',
+    'cloudinary',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -59,7 +67,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            BASE_DIR / 'templates'
+            BASE_DIR / 'Templates'
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -79,18 +87,20 @@ WSGI_APPLICATION = 'noxa.wsgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+# https://docs.djangoproject.com/en/4.2/ref/settings/#databasess
 
+# Database configuration
+# Railway provide DATABASE_URL by We use Neon as fallback for production.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL', 'postgresql://neondb_owner:npg_rleNsy85vcMO@ep-lingering-poetry-aiichweg-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'),
+        conn_max_age=0
+    )
 }
 
 
 # Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
+# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validatorss
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -129,6 +139,9 @@ STATICFILES_DIRS = [
     BASE_DIR / 'Static',
 ]
 
+# WhiteNoise configuration
+# (Note: In Django 4.2+, prefer using the STORAGES setting below)
+
 # Define the user model
 AUTH_USER_MODEL = 'base.CustomUser' # 'auth.User' by default
 
@@ -138,17 +151,63 @@ LOGIN_REDIRECT_URL = '/'  # Redirect to home after login
 LOGOUT_REDIRECT_URL = '/login/'  # Redirect to login after logout
 
 # Media files
+# Robust Cloudinary configuration
+cloudinary_url = os.getenv('CLOUDINARY_URL', 'cloudinary://732974968223895:t6rzUL2tnGvmxzkelPF3zsVp-YY@dsupmimkx')
+if cloudinary_url:
+    CLOUDINARY_STORAGE = {
+        'CLOUDINARY_URL': cloudinary_url,
+    }
+  
+else:
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME', 'dsupmimkx'),
+        'API_KEY': os.getenv('CLOUDINARY_API_KEY', '732974968223895'),
+        'API_SECRET': os.getenv('CLOUDINARY_API_SECRET', 't6rzUL2tnGvmxzkelPF3zsVp-YY'),
+    }
+
+# Modern Django 4.2+ Storage configuration
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
+# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-fiel
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # OpenAI API
 OPENAI_API_KEY = 'openai-api-key'
+
+# RAG Configuration
+from dotenv import load_dotenv
+import os
+
+# Charge les variables d'environnement depuis .env si présent
+load_dotenv()
+
+# HuggingFace
+HF_TOKEN = os.getenv('HF_TOKEN', None)
+
+# Pinecone
+PINECONE_API_KEY = os.getenv('PINECONE_API_KEY', None)
+PINECONE_INDEX_NAME = os.getenv('PINECONE_INDEX_NAME', 'rag-test2')
+PINECONE_EMBED_MODEL = os.getenv('PINECONE_EMBED_MODEL', 'multilingual-e5-large')
+PINECONE_RERANK_MODEL = os.getenv('PINECONE_RERANK_MODEL', 'bge-reranker-v2-m3')
+PINECONE_NAMESPACE = os.getenv('PINECONE_NAMESPACE', '__default__')
+
+# LLM
+LLM_MODEL = os.getenv('LLM_MODEL', 'meta-llama/Llama-3.1-8B-Instruct')
+LLM_TEMPERATURE = float(os.getenv('LLM_TEMPERATURE', '0.7'))
+LLM_MAX_TOKENS = int(os.getenv('LLM_MAX_TOKENS', '1000'))
 
 # Logging
 LOGGING = {
@@ -168,4 +227,40 @@ LOGGING = {
             'propagate': True,
         },
     },
+}
+
+# Jazzmin Settings
+JAZZMIN_SETTINGS = {
+    "site_title": "NOXA Admin",
+    "site_header": "NOXA",
+    "site_brand": "NOXA Admin",
+    "welcome_sign": "Bienvenue sur l'administration de NOXA",
+    "copyright": "NOXA AI",
+    "search_model": ["auth.User", "base.Publication"],
+    
+    # UI Customization
+    "topmenu_links": [
+        {"name": "Home",  "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "Chat", "url": "/chat/", "new_window": True},
+    ],
+    
+    # Navigation Icons
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "base.Publication": "fas fa-file-pdf",
+        "base.DocumentChunk": "fas fa-layer-group",
+        "base.Collection": "fas fa-folder",
+        "chat.Conversation": "fas fa-comments",
+        "chat.Message": "fas fa-comment-dots",
+    },
+    
+    # Order of usage
+    "order_with_respect_to": ["chat", "base", "auth"],
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "theme": "flatly",
+    "dark_mode_theme": "darkly",
 }

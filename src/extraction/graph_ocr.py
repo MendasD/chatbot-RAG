@@ -1,7 +1,7 @@
+# PLUS UTILISE
 from huggingface_hub import hf_hub_download
 import re
 from PIL import Image
-
 from transformers import NougatProcessor, VisionEncoderDecoderModel
 from accelerate import Accelerator
 import torch

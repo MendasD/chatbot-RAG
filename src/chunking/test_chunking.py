@@ -58,8 +58,14 @@ def load_extracted_document(json_path: str) -> ExtractedDocument:
                 content=block_data['content'],
                 page_number=block_data['page_number'],
                 level=block_data.get('level'),
-                metadata=block_data.get('metadata')
+                metadata=block_data.get('metadata'),
+                image_id=block_data.get('image_id'),
+                image_description=block_data.get('image_description'),
+                image_caption=block_data.get('image_caption'),
+                image_path=block_data.get('image_path'),
+                table_structure=block_data.get('table_structure')
             )
+            
             blocks.append(block)
         
         page = PageContent(

@@ -77,6 +77,12 @@ class ChatMessage(models.Model):
     is_helpful = models.BooleanField(null=True, blank=True)
     feedback_text = models.TextField(blank=True)
 
+    # Pièces jointes (audio, documents, etc.)
+    file = models.FileField(upload_to='chat_attachments/', null=True, blank=True)
+    file_type = models.CharField(max_length=50, null=True, blank=True)
+    
+    metadata = models.JSONField(default=dict, blank=True, help_text="Métadonnées extraites (questions suivies, images citées, etc.)")
+
     class Meta:
         ordering = ['created_at']
         verbose_name = "Message"
@@ -100,7 +106,16 @@ class ChatSource(models.Model):
     publication = models.ForeignKey(
         'base.Publication',
         on_delete=models.CASCADE,
-        related_name='chat_references'
+        related_name='chat_references',
+        null=True,
+        blank=True
+    )
+    attachment = models.ForeignKey(
+        'ChatAttachment',
+        on_delete=models.CASCADE,
+        related_name='chat_references',
+        null=True,
+        blank=True
     )
     chunk_index = models.IntegerField(help_text="Index du chunk utilisé dans le document")
     relevance_score = models.FloatField(help_text="Score de similarité (0-1)")
@@ -113,7 +128,8 @@ class ChatSource(models.Model):
         verbose_name_plural = "Sources"
 
     def __str__(self):
-        return f"{self.publication.theme} (score: {self.relevance_score:.2f})"
+        source_name = self.publication.theme if self.publication else (self.attachment.filename if self.attachment else "Unknown source")
+        return f"{source_name} (score: {self.relevance_score:.2f})"
 
 
 class ChatFeedback(models.Model):
@@ -155,3 +171,37 @@ class ChatFeedback(models.Model):
 
     def __str__(self):
         return f"Feedback pour message {self.message.id} - {self.rating}/5"
+
+
+class ChatAttachment(models.Model):
+    """
+    Fichier joint à un message.
+    Permet d'avoir plusieurs fichiers par message.
+    """
+    message = models.ForeignKey(
+        ChatMessage,
+        on_delete=models.CASCADE,
+        related_name='attachments'
+    )
+    file = models.FileField(upload_to='chat_attachments/')
+    filename = models.CharField(max_length=255, blank=True)
+    file_size = models.IntegerField(default=0)
+    file_type = models.CharField(max_length=100, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Pièce jointe"
+        verbose_name_plural = "Pièces jointes"
+
+    def __str__(self):
+        return self.filename or f"Attachment {self.id}"
+
+    def save(self, *args, **kwargs):
+        if self.file and not self.filename:
+            self.filename = self.file.name
+        if self.file and not self.file_size:
+            try:
+                self.file_size = self.file.size
+            except:
+                pass
+        super().save(*args, **kwargs)

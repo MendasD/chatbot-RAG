@@ -23,8 +23,30 @@ db.sqlite3
 *.tmp
 *.swp
 *~
-# Ignorer les fichiers statiques collectés
+# Ignorer les fichiers statiques collecté
 staticfiles/
 
 # Ignorer les fichiers médias téléchargés
 media/
+
+# Ignorer les fichiers d'environnement avec clés API
+.env
+.env.local
+.env.production
+
+# Ignorer les fichiers temporaires ou générés
+*.tmp
+*.swp
+*~
+temp/
+llm_context.txt
+llama_prompt.txt
+
+# Données RAG
+*.pdf
+*.txt
+*.json
+*.pkl
+*.npy
+*.faiss
+*.db

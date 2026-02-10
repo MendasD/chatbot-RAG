@@ -47,7 +47,7 @@ class PageContent:
     page_text: str  # Texte brut complet de la page
     has_images: bool = False
     has_tables: bool = False
-    extraction_method: str = "pymupdf"  # ou "chandra"
+    extraction_method: str = "pymupdf"  # ou "ocr"
     confidence_score: Optional[float] = None
 
 
@@ -63,7 +63,7 @@ class TOCEntry:
 class DocumentMetadata:
     """Métadonnées du document"""
     title: Optional[str] = None
-    author: Optional[str] = None
+    author: List[str] = field(default_factory=list) #Optional[str] = None
     subject: Optional[str] = None
     keywords: List[str] = field(default_factory=list)
     creation_date: Optional[str] = None
@@ -71,7 +71,11 @@ class DocumentMetadata:
     num_pages: int = 0
     language: Optional[str] = None
     producer: Optional[str] = None
-    file_size: Optional[int] = None
+    file_size: Optional[int] = None # en Mo
+    publication_id: Optional[int] = None
+    attachment_id: Optional[int] = None
+    user_id: Optional[int] = None
+    is_public: bool = False
 
 
 @dataclass
@@ -104,11 +108,11 @@ class ExtractedDocument:
         return asdict(self)
     
     @staticmethod
-    def create_new(source_file: str):
+    def create_new(source_file: str, uploaded_url: str):
         """Crée un nouveau document vide"""
         return ExtractedDocument(
             document_id=str(uuid.uuid4()),
-            source_file=source_file,
+            source_file=uploaded_url, #source_file,
             filename=source_file.split('/')[-1],
             extraction_date=datetime.now().isoformat(),
             metadata=DocumentMetadata(),

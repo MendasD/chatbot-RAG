@@ -55,7 +55,8 @@
 
 .home__container--first__item--main .topic .topic__specs {
     flex: 1;
-    min-width: 0; /* Allows text truncation */
+    min-width: 0;
+    /* Allows text truncation */
 }
 
 .home__container--first__item--main .topic .topic__specs p {
@@ -327,4 +328,3 @@
     background-color: #f5f5f5;
     color: #000000;
 }
-

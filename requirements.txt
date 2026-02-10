@@ -1,9 +1,35 @@
-# requirements-extraction
-pymupdf==1.23.8
-transformers==4.36.2
-torch==2.1.2
-pillow==10.1.0
-pyyaml==6.0.1
-python-dotenv==1.0.0
+# Extraction & Core
+asgiref==3.9.1
+Django==5.2.5
+Markdown==3.8.2
+django-jazzmin==3.0.0
+pillow==11.3.0
+PyPDF2==3.0.1
+sqlparse==0.5.3
+typing_extensions==4.14.1
+tzdata==2025.2
 pdf2image==1.16.3
-chandra-ocr==0.1.8
+pymupdf==1.23.8
+python-dotenv==1.1.1
+pyyaml==6.0.1
+gdown
+
+# Production & DB
+gunicorn
+whitenoise
+psycopg2-binary
+dj-database-url
+boto3
+cloudinary
+django-cloudinary-storage
+
+# AI & RAG (Optimized for CPU)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+transformers
+sentence-transformers
+huggingface-hub>=0.20.0
+pinecone>=3.0.0
+python-doctr[torch]
+numpy
+opencv-python-headless

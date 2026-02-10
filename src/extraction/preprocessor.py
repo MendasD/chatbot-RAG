@@ -1,17 +1,9 @@
-### **preprocessor.py**
-# - Nettoie le texte extrait
-# - Normalise les espaces, sauts de ligne
-# - Fusionne les mots coupés (césure)
-# - Supprime headers/footers répétitifs
-# - Extrait URLs, emails
-# - Détecte et structure les références
-
 """
 Preprocessor pour nettoyer et normaliser le texte extrait
 """
 import re
 from typing import List, Set
-from document_schemas import ContentBlock
+from .document_schemas import ContentBlock
 
 
 class TextPreprocessor:
@@ -98,6 +90,10 @@ class TextPreprocessor:
         Returns:
             Texte nettoyé
         """
+        # Les formules LaTeX ne doivent pas Ãªtre modifiÃ©es
+        if content_type == "formula":
+            return content.strip()
+
         # Normalise les espaces
         if self.normalize_whitespace:
             content = self._normalize_whitespace(content)

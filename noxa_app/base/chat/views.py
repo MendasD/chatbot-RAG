@@ -2,7 +2,10 @@
 Views pour l'application Chat - Interface Chatbot RAG
 """
 import json
+import os
+import uuid
 import logging
+import traceback
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods, require_POST, require_GET
@@ -11,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.db.models import Q
 
+from django.utils import timezone
 from .models import Conversation, ChatMessage, ChatSource, ChatFeedback
 from .services import get_rag_service
 from base.models import Topic, Publication
@@ -42,6 +46,7 @@ def chat_home(request):
         'topics': topics,
         'suggested_questions': suggested_questions,
         'active_conversation': None,
+        'conversation_documents': [],
     }
 
     return render(request, 'chat/chat_interface.html', context)
@@ -59,7 +64,7 @@ def conversation_view(request, conversation_id):
     )
 
     # Récupère les messages avec leurs sources (renommé pour éviter conflit avec Django messages)
-    chat_messages = conversation.messages.prefetch_related('sources__publication').all()
+    chat_messages = conversation.messages.prefetch_related('sources__publication', 'sources__attachment').all()
 
     # Autres conversations pour la sidebar
     conversations = Conversation.objects.filter(
@@ -69,11 +74,59 @@ def conversation_view(request, conversation_id):
 
     topics = Topic.objects.all()
 
+    # Récupère tous les documents liés à la conversation (Uploads + Sources citées)
+    from .models import ChatAttachment
+    
+    # 1. Documents uploadés (ChatAttachment)
+    attachments = ChatAttachment.objects.filter(
+        message__conversation=conversation
+    ).select_related('message')
+    
+    # 2. Sources citées (ChatSource)
+    # Note: On utilise select_related pour éviter N+1 requêtes
+    cited_sources = ChatSource.objects.filter(
+        message__conversation=conversation
+    ).select_related('publication', 'attachment')
+    
+    # Fusionne en liste unique par nom de fichier/thème
+    unique_docs = {}
+    
+    for att in attachments:
+        # On utilise le nom du fichier comme clé unique
+        name = att.file.name.split('/')[-1]
+        unique_docs[name] = {
+            'id': f"att_{att.id}",
+            'title': name,
+            'url': att.file.url,
+            'icon': 'pdf' if name.lower().endswith('.pdf') else 'file'
+        }
+        
+    for source in cited_sources:
+        if source.publication:
+            name = source.publication.theme
+            if name not in unique_docs:
+                unique_docs[name] = {
+                    'id': f"pub_{source.publication.id}",
+                    'title': name,
+                    'url': f'/viewPdf/{source.publication.id}/',  # Use Django view for presigned URL
+                    'icon': 'pdf'
+                }
+        elif source.attachment:
+            name = source.attachment.filename
+            if name not in unique_docs:
+                unique_docs[name] = {
+                    'id': f"att_{source.attachment.id}",
+                    'title': name,
+                    'url': source.attachment.file.url,  # Cloudinary URL, no presigning needed
+                    'icon': 'pdf' if name.lower().endswith('.pdf') else 'file'
+                }
+
     context = {
         'conversations': conversations,
         'active_conversation': conversation,
         'chat_messages': chat_messages,
         'topics': topics,
+        'conversation_documents': list(unique_docs.values()),
     }
 
     return render(request, 'chat/chat_interface.html', context)
@@ -129,26 +182,156 @@ def send_message(request, conversation_id):
             user=request.user
         )
 
-        data = json.loads(request.body)
-        user_message = data.get('message', '').strip()
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+            user_message = data.get('message', '').strip()
+        else:
+            # Handle multipart/form-data
+            user_message = request.POST.get('message', '').strip()
 
-        if not user_message:
+        # Handle multiple files
+        uploaded_files = request.FILES.getlist('files')
+        # Also check single 'file' for backward compatibility or different client implementation
+        if not uploaded_files and request.FILES.get('file'):
+            uploaded_files = [request.FILES.get('file')]
+
+        # Validate files are not empty and are PDFs only
+        if uploaded_files:
+            for f in uploaded_files:
+                if f.size == 0:
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Fichier vide: {f.name}'
+                    }, status=400)
+                
+                # Only accept PDF files
+                if not f.name.lower().endswith('.pdf'):
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Seuls les fichiers PDF sont acceptés. Fichier rejeté: {f.name}'
+                    }, status=400)
+
+        if not user_message and not uploaded_files:
             return JsonResponse({
                 'success': False,
-                'error': 'Message vide'
+                'error': 'Message ou fichier vide'
             }, status=400)
 
         # Sauvegarde le message utilisateur
         user_msg = ChatMessage.objects.create(
             conversation=conversation,
             role='user',
-            content=user_message
+            content=user_message,
+            # Legacy fields - keep for backward compatibility if needed, using first file
+            file=uploaded_files[0] if uploaded_files else None,
+            file_type=uploaded_files[0].content_type if uploaded_files else None
         )
 
-        # Récupère l'historique de la conversation (limité)
-        history = list(conversation.messages.order_by('created_at').values(
-            'role', 'content'
-        )[:10])
+        # Handle attachments and "Save to Space"
+        save_to_space = request.POST.get('save_to_space') == 'true'
+        files_saved_count = 0
+        from .models import ChatAttachment
+        from base.models import Publication
+        from .document_processing import get_document_processing_service
+        processed_context = False
+
+        for f in uploaded_files:
+            # Create specific attachment object
+            # This saves the file to storage and consumes it
+            attachment = ChatAttachment.objects.create(
+                message=user_msg,
+                file=f,
+                file_size=f.size,
+                file_type=f.content_type
+            )
+            
+            # Optional: Save to personal space (Publications)
+            if save_to_space:
+                is_pdf = f.name.lower().endswith('.pdf')
+                if is_pdf:
+                    try:
+                        # Re-open the saved file from attachment instead of reusing f
+                        attachment.file.open('rb')
+                        Publication.objects.create(
+                            user=request.user,
+                            theme=f.name, # Use filename as theme/title
+                            file=attachment.file,
+                            description=f"Uploaded via Chat on {timezone.now().strftime('%Y-%m-%d %H:%M')}"
+                        )
+                        attachment.file.close()
+                        files_saved_count += 1
+                    except Exception as e:
+                        logger.error(f"Error saving to space: {e}")
+            
+            # FAST TRACK: Process PDF immediately for RAG context
+            if f.name.lower().endswith('.pdf'):
+                try:
+                    logger.info(f"⚡ FAST TRACK: Processing {f.name} for immediate context...")
+                    # Save temp file for processing using the saved attachment file
+                    import os
+                    from django.conf import settings
+                    
+                    temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_uploads')
+                    os.makedirs(temp_dir, exist_ok=True)
+                    temp_path = os.path.join(temp_dir, f.name)
+                    
+                    temp_path = os.path.join(temp_dir, f.name)
+                    
+                    # Use f directly after seeking back to start!
+                    # This is MUCH safer than trying to stream back from Cloudinary
+                    try:
+                        f.seek(0)
+                        with open(temp_path, 'wb+') as destination:
+                            for chunk in f.chunks():
+                                destination.write(chunk)
+                    except Exception as e:
+                        logger.error(f"❌ Error writing temp file from f: {e}")
+                        # Fallback to attachment.file if f fails for some reason
+                        attachment.file.open('rb')
+                        with open(temp_path, 'wb+') as destination:
+                            for chunk in attachment.file.chunks():
+                                destination.write(chunk)
+                        attachment.file.close()
+                    
+                    # Process sync
+                    proc_service = get_document_processing_service()
+                    # Add user_id metadata so we can filter/track if needed (future proofing)
+                    metadata = {
+                        "user_id": request.user.id, 
+                        "source": "chat_upload",
+                        "attachment_id": attachment.id
+                    }
+                    proc_service.process_pdf(
+                        temp_path, 
+                        metadata=metadata,
+                        upload_to_pinecone=True,
+                        user_id=request.user.id,
+                        is_public=save_to_space
+                    )
+                    
+                    # Clean up temp file
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                        
+                    processed_context = True
+                    logger.info(f"✅ FAST TRACK: {f.name} processed and indexed!")
+                    
+                except Exception as e:
+                    logger.error(f"❌ FAST TRACK Error processing {f.name}: {e}")
+
+        # Récupère l'historique récent (10 derniers messages AVANT l'actuel)
+        # On utilise reverse() pour avoir les plus récents, puis on remet dans l'ordre chrono
+        last_messages = conversation.messages.exclude(id=user_msg.id).order_by('-created_at')[:10]
+        history = list(reversed(list(last_messages.values('role', 'content'))))
+
+        # Construit le filtre de métadonnées pour Pinecone
+        # On veut: (is_public == True) OR (user_id == current_user_id)
+        metadata_filter = {
+            "$or": [
+                {"is_public": {"$eq": True}},
+                {"user_id": {"$eq": request.user.id}}
+            ]
+        }
 
         # Appelle le service RAG
         rag_service = get_rag_service()
@@ -157,7 +340,8 @@ def send_message(request, conversation_id):
             topic_id=conversation.topic_id if conversation.topic else None,
             topic_name=conversation.topic.name if conversation.topic else None,
             conversation_history=history,
-            top_k=5
+            top_k=5,
+            metadata_filter=metadata_filter
         )
 
         # Sauvegarde la réponse de l'assistant
@@ -168,30 +352,70 @@ def send_message(request, conversation_id):
             query_embedding_time=response.query_embedding_time,
             retrieval_time=response.retrieval_time,
             generation_time=response.generation_time,
-            total_time=response.total_time
+            total_time=response.total_time,
+            metadata=response.metadata if hasattr(response, 'metadata') and response.metadata else {}
         )
+        logger.info(f"✅ Assistant message created: ID={assistant_msg.id}")
 
         # Sauvegarde les sources
         sources_data = []
+        from .models import ChatSource
         for source in response.sources:
             try:
-                publication = Publication.objects.get(id=source.publication_id)
+                pub = None
+                att = None
+                source_title = source.publication_title
+                
+                if source.publication_id:
+                    try:
+                        pub = Publication.objects.get(id=source.publication_id)
+                        source_title = pub.theme
+                    except Publication.DoesNotExist:
+                        pass
+                
+                if not pub and source.attachment_id:
+                    try:
+                        att = ChatAttachment.objects.get(id=source.attachment_id)
+                        source_title = att.filename
+                    except ChatAttachment.DoesNotExist:
+                        pass
+                
+                # if we have neither, skip (or create a generic one if you prefer)
+                if not pub and not att:
+                    logger.warning(f"Source skipping: neither publication {source.publication_id} nor attachment {source.attachment_id} found")
+                    continue
+
                 chat_source = ChatSource.objects.create(
                     message=assistant_msg,
-                    publication=publication,
+                    publication=pub,
+                    attachment=att,
                     chunk_index=source.chunk_index,
                     relevance_score=source.relevance_score,
                     excerpt=source.content[:500],
                     page_number=source.page_number
                 )
+                
+                # Build URL that goes through Django view (which generates presigned URL)
+                if pub:
+                    source_url = f'/viewPdf/{pub.id}/'
+                elif att:
+                    source_url = att.file.url  # Attachments are on Cloudinary, no presigning needed
+                else:
+                    source_url = '#'
+                
                 sources_data.append({
-                    'publication_id': publication.id,
-                    'publication_title': publication.theme,
+                    'id': pub.id if pub else att.id,
+                    'publication_id': pub.id if pub else None,
+                    'attachment_id': att.id if att else None,
+                    'type': 'publication' if pub else 'attachment',
+                    'title': source_title,
+                    'url': source_url,
                     'page_number': source.page_number,
                     'relevance_score': round(source.relevance_score, 2),
                     'excerpt': source.content[:200] + '...' if len(source.content) > 200 else source.content
                 })
-            except Publication.DoesNotExist:
+            except Exception as e:
+                logger.error(f"Error creating source: {e}")
                 continue
 
         # Met à jour le titre de la conversation si c'est le premier message
@@ -218,16 +442,27 @@ def send_message(request, conversation_id):
                     'retrieval_time': round(response.retrieval_time, 2),
                     'generation_time': round(response.generation_time, 2),
                     'total_time': round(response.total_time, 2)
-                }
+                },
+                'metadata': response.metadata if hasattr(response, 'metadata') else {}
             },
-            'conversation_title': conversation.title
+            'conversation_title': conversation.title,
+            'files_saved': files_saved_count
         })
 
     except json.JSONDecodeError:
+        logger.error("❌ JSON Decode Error in send_message")
         return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
     except Exception as e:
-        logger.error(f"Erreur envoi message: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        error_msg = str(e)
+        stack_trace = traceback.format_exc()
+        logger.error(f"❌ FATAL ERROR in send_message: {error_msg}")
+        logger.error(f"📝 STACK TRACE:\n{stack_trace}")
+        
+        # Log specifically for column mapping issues
+        if "metadata" in error_msg or "column" in error_msg.lower():
+            logger.error("⚠️ Possible database schema mismatch (missing metadata column).")
+            
+        return JsonResponse({'success': False, 'error': error_msg}, status=500)
 
 
 @login_required

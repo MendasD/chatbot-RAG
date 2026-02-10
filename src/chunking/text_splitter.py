@@ -125,10 +125,13 @@ class SmartTextSplitter:
         print(f"   Pages: {len(doc.pages)}, Stratégie: {self.strategy}")
         
         if self.strategy == "recursive":
+            print("   Utilisation du découpage récursif standard")
             chunks = self._split_recursive(doc)
         elif self.strategy == "semantic":
+            print(  "   Utilisation du découpage sémantique")
             chunks = self._split_semantic(doc)
         elif self.strategy == "mixed":
+            print("   Utilisation du découpage mixte")
             chunks = self._split_mixed(doc)
         else:
             raise ValueError(f"Stratégie inconnue: {self.strategy}")
@@ -149,14 +152,14 @@ class SmartTextSplitter:
             # Combine les blocs de texte de la page
             page_blocks = [
                 block for block in page.content_blocks
-                if block.type in ["text", "title", "list"]
+                if block.type in ["text", "title", "list", "formula", "image"]
             ]
             
             if not page_blocks:
                 continue
             
             # Construit le texte de la page avec contexte
-            page_text = self._build_page_text(page_blocks, doc.metadata)
+            page_text, placeholder_maps = self._build_text_with_placeholders(page_blocks)
             
             # Découpe avec LangChain
             text_chunks = self.splitter.split_text(page_text)
@@ -164,21 +167,35 @@ class SmartTextSplitter:
             # Crée les DocumentChunks
             for chunk_text in text_chunks:
                 chunk_id = f"{doc.document_id}_chunk_{chunk_counter}"
+                expanded_text, formulas_used, images_used = self._expand_placeholders_and_collect_metadata(
+                    chunk_text,
+                    placeholder_maps
+                )
                 
                 chunk = DocumentChunk(
                     chunk_id=chunk_id,
-                    content=chunk_text,
+                    content=expanded_text,
                     document_id=doc.document_id,
-                    document_name=doc.filename,
+                    document_name= doc.source_file ,#doc.filename,
                     page_numbers=[page.page_number],
                     chunk_index=chunk_counter,
                     total_chunks=0,  # Sera mis à jour après
                     metadata={
                         'extraction_method': page.extraction_method,
-                        'has_images': page.has_images,
+                        'has_images': len(images_used) > 0,
+                        'page_has_images': page.has_images,
                         'has_tables': page.has_tables,
+                        'has_formulas': len(formulas_used) > 0,
                         'document_title': doc.metadata.title,
-                        'document_author': doc.metadata.author
+                        'document_author': doc.metadata.author,
+                        'publication_id': doc.metadata.publication_id,
+                        'attachment_id': doc.metadata.attachment_id,
+                        'user_id': doc.metadata.user_id,
+                        'is_public': doc.metadata.is_public,
+                        'image_ids': [i.get('image_id') for i in images_used if i.get('image_id')],
+                        'image_paths': [i.get('image_path') for i in images_used if i.get('image_path')],
+                        'images': images_used,
+                        'formulas': formulas_used
                     }
                 )
                 
@@ -202,6 +219,7 @@ class SmartTextSplitter:
         current_section = []
         current_title = None
         current_pages = set()
+        current_maps = {'formulas': {}, 'images': {}}
         
         for page in doc.pages:
             for block in page.content_blocks:
@@ -218,12 +236,24 @@ class SmartTextSplitter:
                             sub_chunks = [chunk_text]
                         
                         for sub_chunk in sub_chunks:
-                            chunk = self._create_chunk(
+                            expanded_text, formulas_used, images_used = self._expand_placeholders_and_collect_metadata(
                                 sub_chunk,
+                                current_maps
+                            )
+                            chunk = self._create_chunk(
+                                expanded_text,
                                 doc,
                                 list(current_pages),
                                 chunk_counter,
-                                {'section_title': current_title}
+                                {
+                                    'section_title': current_title,
+                                    'has_images': len(images_used) > 0,
+                                    'has_formulas': len(formulas_used) > 0,
+                                    'image_ids': [i.get('image_id') for i in images_used if i.get('image_id')],
+                                    'image_paths': [i.get('image_path') for i in images_used if i.get('image_path')],
+                                    'images': images_used,
+                                    'formulas': formulas_used
+                                }
                             )
                             chunks.append(chunk)
                             chunk_counter += 1
@@ -232,10 +262,14 @@ class SmartTextSplitter:
                     current_section = [block.content]
                     current_title = block.content
                     current_pages = {page.page_number}
+                    current_maps = {'formulas': {}, 'images': {}}
                 
-                elif block.type in ["text", "list"]:
-                    current_section.append(block.content)
+                elif block.type in ["text", "list", "formula", "image"]:
+                    part, maps = self._build_text_with_placeholders([block])
+                    current_section.append(part)
                     current_pages.add(page.page_number)
+                    current_maps['formulas'].update(maps['formulas'])
+                    current_maps['images'].update(maps['images'])
         
         # Finalise la dernière section
         if current_section:
@@ -246,12 +280,24 @@ class SmartTextSplitter:
                 sub_chunks = [chunk_text]
             
             for sub_chunk in sub_chunks:
-                chunk = self._create_chunk(
+                expanded_text, formulas_used, images_used = self._expand_placeholders_and_collect_metadata(
                     sub_chunk,
+                    current_maps
+                )
+                chunk = self._create_chunk(
+                    expanded_text,
                     doc,
                     list(current_pages),
                     chunk_counter,
-                    {'section_title': current_title}
+                    {
+                        'section_title': current_title,
+                        'has_images': len(images_used) > 0,
+                        'has_formulas': len(formulas_used) > 0,
+                        'image_ids': [i.get('image_id') for i in images_used if i.get('image_id')],
+                        'image_paths': [i.get('image_path') for i in images_used if i.get('image_path')],
+                        'images': images_used,
+                        'formulas': formulas_used
+                    }
                 )
                 chunks.append(chunk)
                 chunk_counter += 1
@@ -275,7 +321,7 @@ class SmartTextSplitter:
         chunk_counter = 0
         
         for chunk in semantic_chunks:
-            if chunk.char_count > self.chunk_size * 1.5:
+            if chunk.char_count > self.chunk_size * 1.5 and not chunk.metadata.get('has_formulas'):
                 # Redécoupe ce chunk
                 sub_texts = self.splitter.split_text(chunk.content)
                 
@@ -304,32 +350,102 @@ class SmartTextSplitter:
         
         return final_chunks
     
-    def _build_page_text(
+    def _build_text_with_placeholders(
         self, 
-        blocks: List[ContentBlock], 
-        metadata
-    ) -> str:
+        blocks: List[ContentBlock]
+    ) -> tuple:
         """
-        Construit le texte d'une page avec contexte
-        Ajoute des marqueurs pour préserver la structure
+        Construit le texte avec placeholders pour images/formules
         """
         text_parts = []
+        formulas = {}
+        images = {}
+        formula_idx = 0
+        image_idx = 0
         
         for block in blocks:
             if block.type == "title":
-                # Formate les titres avec des marqueurs
                 prefix = "#" * (block.level or 1)
                 text_parts.append(f"{prefix} {block.content}")
             
             elif block.type == "list":
-                # Préserve le format liste
                 text_parts.append(block.content)
             
+            elif block.type == "formula":
+                token = f"[[FORMULA:{formula_idx}]]"
+                formulas[token] = {
+                    'latex': block.content,
+                    'page_number': block.page_number,
+                    'bbox': self._bbox_to_dict(block.bbox)
+                }
+                text_parts.append(token)
+                formula_idx += 1
+            
+            elif block.type == "image":
+                token = f"[[IMAGE:{image_idx}]]"
+                image_id = block.image_id
+                if not image_id and block.image_path:
+                    image_id = Path(block.image_path).stem
+                
+                print(f"   🖼️  Image détectée: ID={image_id}, Path={block.image_path}")
+                images[token] = {
+                    'image_id': image_id,
+                    'image_path': block.image_path,
+                    'description': block.image_description or block.content or "",
+                    'page_number': block.page_number,
+                    'bbox': self._bbox_to_dict(block.bbox)
+                }
+                text_parts.append(token)
+                image_idx += 1
+            
             else:
-                # Texte normal
                 text_parts.append(block.content)
         
-        return "\n\n".join(text_parts)
+        return "\n\n".join(text_parts), {'formulas': formulas, 'images': images}
+
+    def _expand_placeholders_and_collect_metadata(
+        self, 
+        text: str, 
+        maps: Dict
+    ) -> tuple:
+        """
+        Remplace les placeholders et retourne les métadonnées associées
+        """
+        formulas_used = []
+        images_used = []
+        
+        for token, data in maps.get('formulas', {}).items():
+            if token in text:
+                replacement = f"$$ {data.get('latex', '')} $$"
+                text = text.replace(token, replacement)
+                formulas_used.append(data)
+        
+        for token, data in maps.get('images', {}).items():
+            if token in text:
+                image_id = data.get('image_id') #or "unknown"
+                image_path = data.get('image_path')
+                print(f"   🖼️  Insertion image dans chunk: ID={image_id}")
+                desc = data.get('description', '').strip()
+                if desc:
+                    replacement = f"[IMAGE {image_path}] {desc}"
+                else:
+                    replacement = f"[IMAGE {image_path}]"
+                text = text.replace(token, replacement)
+                images_used.append(data)
+        
+        return text, formulas_used, images_used
+
+    def _bbox_to_dict(self, bbox) -> Optional[Dict]:
+        """Convertit un BoundingBox en dict sérialisable"""
+        if bbox is None:
+            return None
+        return {
+            'x0': bbox.x0,
+            'y0': bbox.y0,
+            'x1': bbox.x1,
+            'y1': bbox.y1,
+            'page': bbox.page
+        }
     
     def _create_chunk(
         self,
@@ -342,7 +458,11 @@ class SmartTextSplitter:
         """Helper pour créer un DocumentChunk"""
         metadata = {
             'document_title': doc.metadata.title,
-            'document_author': doc.metadata.author
+            'document_author': ", ".join(doc.metadata.author) if doc.metadata.author else None,
+            'publication_id': doc.metadata.publication_id,
+            'attachment_id': doc.metadata.attachment_id,
+            'user_id': doc.metadata.user_id,
+            'is_public': doc.metadata.is_public,
         }
         if extra_metadata:
             metadata.update(extra_metadata)
