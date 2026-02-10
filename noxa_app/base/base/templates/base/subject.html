@@ -539,18 +539,20 @@
 
             <div class="corr-comments" id="comments-{{ corr.id }}" style="display:none;">
               {% with comments=comments_map|get_item:corr.id %}
-              {% for comment in comments %}
-              <div class="comment">
-                <div class="comment-head">
-                  <div><strong>{% if comment.author %}{{ comment.author.username }}{% else %}Anonymous{% endif
-                      %}</strong></div>
-                  <div><small>{{ comment.createdAt|timesince}} ago</small></div>
-                </div>
-                <div class="comment-body">{{ comment.body }}</div>
-              </div>
-              {% empty %}
-              <div class="empty-note">No comments yet</div>
-              {% endfor %}
+                {% if comments %}
+                  {% for comment in comments %}
+                  <div class="comment">
+                    <div class="comment-head">
+                      <div><strong>{% if comment.author %}{{ comment.author.username }}{% else %}Anonymous{% endif
+                          %}</strong></div>
+                      <div><small>{{ comment.createdAt|timesince}} ago</small></div>
+                    </div>
+                    <div class="comment-body">{{ comment.body }}</div>
+                  </div>
+                  {% endfor %}
+                {% else %}
+                <div class="empty-note">No comments yet</div>
+                {% endif %}
               {% endwith %}
 
               <!-- add comment form -->
