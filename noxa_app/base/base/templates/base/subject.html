@@ -506,8 +506,9 @@
             <div class="corr-title-row">
               <p class="corr-title">Correction #{{ forloop.counter }}</p>
               <div class="corr-meta">
-                {% if corr.author %}by <a href="{% url 'base:user-profile' corr.author.id %}">@{{ corr.author.username
-                  }}</a> · {% endif %}
+                {% if corr.author %}
+                  by <a href="{% url 'base:user-profile' corr.author.id %}">@{{ corr.author.username }}</a> . 
+                {% endif %}
                 {{ corr.createdAt|timesince}} ago
               </div>
             </div>
