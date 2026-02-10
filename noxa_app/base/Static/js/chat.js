@@ -491,20 +491,38 @@ class NoxaChat {
         // 1.5 Nettoyage de sécurité des tags résiduels (au cas où le backend en aurait raté)
         const tagsToStrip = ['SOURCES_USED', 'IMAGES_USED', 'EQUATIONS_USED', 'FOLLOW_UP_QUESTIONS'];
         tagsToStrip.forEach(tag => {
-            const tagPattern = new RegExp(`${tag}\\s*:\\s*.*?(\\n|$)`, 'gi');
+            // Regex plus agressive pour capturer le tag et son contenu même sur plusieurs lignes
+            const tagPattern = new RegExp(`${tag}\\s*:\\s*(?:\\[[\\s\\S]*?\\]|.*?)(\\n|$)`, 'gi');
             html = html.replace(tagPattern, '');
         });
 
-        // 2. Remplacer les citations [Source: document, page X] par des liens cliquables
+        // 1.6 Nettoyage des headings de questions suggérées si elles ont été incluses par erreur
+        const suggestionHeadings = ['Questions suivantes :', 'Questions suggérées :', 'Follow-up questions :', 'Questions suivantes:'];
+        suggestionHeadings.forEach(heading => {
+            html = html.replace(new RegExp(`<p>\\s*${heading}\\s*<\\/p>`, 'gi'), '');
+            html = html.replace(new RegExp(`\\s*${heading}\\s*`, 'gi'), '');
+        });
+
+        // 2. Remplacer les citations cliquables
         if (sources && sources.length > 0) {
+            // 2.1 Remplacer les citations indexées [Source: document 1, page X]
+            html = html.replace(/\[Source:\s*(?:document|doc)\s*(\d+)(?:,\s*page\s*(\d+))?\]/gi, (match, index, page) => {
+                const i = parseInt(index) - 1;
+                if (sources[i]) {
+                    const s = sources[i];
+                    const pageStr = page ? `, p.${page}` : (s.page_number ? `, p.${s.page_number}` : '');
+                    return `<a href="${s.url}" class="source-citation" target="_blank" title="${this.escapeHtml(s.title)}">[Source: ${this.escapeHtml(s.title)}${pageStr}]</a>`;
+                }
+                return match;
+            });
+
+            // 2.2 Remplacer les citations par titre [Source: Titre, page X]
             sources.forEach(s => {
-                // Échapper les caractères spéciaux du titre pour la regex
                 const escapedTitle = s.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                // Regex pour [Source: Titre, page X] ou [Source: Titre]
                 const pattern = new RegExp(`\\[Source:\\s*${escapedTitle}(?:,\\s*page\\s*(\\d+))?\\]`, 'g');
 
                 html = html.replace(pattern, (match, page) => {
-                    const pageStr = page ? `, p.${page}` : '';
+                    const pageStr = page ? `, p.${page}` : (s.page_number ? `, p.${s.page_number}` : '');
                     return `<a href="${s.url}" class="source-citation" target="_blank" title="${this.escapeHtml(s.title)}">[Source: ${this.escapeHtml(s.title)}${pageStr}]</a>`;
                 });
             });

@@ -240,8 +240,8 @@ FORMAT DE RÉPONSE OBLIGATOIRE:
 4) À la fin de ta réponse, ajoute **OBLIGATOIREMENT et SILENCIEUSEMENT** ces blocs pour le système (sans les mentionner dans ton texte) :
    SOURCES_USED: [document1.pdf, document2.pdf]
    IMAGES_USED: [id_image1, id_image2]
-   FOLLOW_UP_QUESTIONS: [Question 1; Question 2; Question 3]
-5) Cite toujours tes sources dans le texte: [Source: document_path, page X]
+   FOLLOW_UP_QUESTIONS: [Question 1; Question 2; Question 3] séparées par des points-virgules
+5) Cite toujours tes sources dans le texte: [Source: lien_document, page X]
 6) Si l'info n'est pas dans les documents, dis-le clairement.
 7) Propose 3 à 5 questions courtes et pertinentes en FOLLOW_UP_QUESTIONS.
 8) **NE PAS lister les images disponibles** dans ton texte de réponse. Si tu utilises une image, mentionne-la discrètement ou laisse le système l'afficher via IMAGES_USED.
