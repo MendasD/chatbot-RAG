@@ -1626,8 +1626,8 @@ body .footer {
     margin-top: 20px;
     display: none;
     flex-direction: column;
-    align-items: flex-start;
-    align-self: flex-start;
+    align-items: flex-end;
+    align-self: flex-end;
     gap: 8px;
     width: 100%;
     animation: fadeIn 0.5s ease-out 0.3s both;
@@ -1641,8 +1641,8 @@ body .footer {
     margin-bottom: 4px;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    /* Align to left */
+    justify-content: flex-end;
+    /* Align to right */
     gap: 6px;
 }
 
@@ -1657,8 +1657,8 @@ body .footer {
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: var(--shadow-sm);
-    text-align: left;
-    max-width: 90%;
+    text-align: right;
+    max-width: 80%;
     line-height: 1.4;
 }
 
