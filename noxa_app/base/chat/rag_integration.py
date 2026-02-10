@@ -288,6 +288,31 @@ class DjangoRAGService:
         # Enforce metadata extract from LLM
         extracted_metadata = result.get('extracted_metadata', {})
         
+        # 4. Map image IDs to their actual Cloudinary URLs for the frontend
+        images_used_ids = extracted_metadata.get('images_used', [])
+        if images_used_ids:
+            # Build a map of ID -> Path from all retrieved chunks
+            id_to_path = {}
+            for chunk in enriched_chunks:
+                # Use EnrichedChunk attributes directly
+                ids = chunk.image_ids or []
+                paths = chunk.image_paths or []
+                for img_id, img_path in zip(ids, paths):
+                    if img_id and img_path:
+                        id_to_path[img_id] = img_path
+            
+            # Resolve the IDs parsed by the LLM
+            resolved_image_paths = []
+            for img_id in images_used_ids:
+                if img_id in id_to_path:
+                    resolved_image_paths.append(id_to_path[img_id])
+                else:
+                    # If it's already a URL or path, keep it
+                    resolved_image_paths.append(img_id)
+            
+            # Update the metadata for the UI (chat.js expects paths)
+            extracted_metadata['images_used'] = resolved_image_paths
+        
         total_time = (time.time() - total_start) * 1000
         
         return RAGResponse(

@@ -119,15 +119,35 @@ Réponds uniquement par OUI ou NON."""
             # Texte du chunk déjà déterminé
 
             # Images et formules (si disponibles)
-            images = metadata.get('image_paths') or metadata.get('image_ids') or []
+            # Priorité aux objets images riches avec descriptions
+            rich_images = metadata.get('images') or []
+            image_ids = metadata.get('image_ids', [])
+            image_paths = metadata.get('image_paths', [])
+            
+            # Reconstruction si metadata['images'] est absent (vieux documents)
+            if not rich_images and (image_ids or image_paths):
+                for i in range(max(len(image_ids), len(image_paths))):
+                    rich_images.append({
+                        'image_id': image_ids[i] if i < len(image_ids) else None,
+                        'image_path': image_paths[i] if i < len(image_paths) else None,
+                        'description': ""
+                    })
+
             formulas = metadata.get('formulas_latex') or []
+            
             images_str = ""
+            if rich_images:
+                img_parts = []
+                for img in rich_images[:5]:
+                    iid = img.get('image_id') or "N/A"
+                    idesc = img.get('description') or img.get('image_description') or ""
+                    if idesc:
+                        img_parts.append(f"{iid} ({idesc})")
+                    else:
+                        img_parts.append(iid)
+                images_str = "\nImages/Figures: " + " | ".join(img_parts)
+
             formulas_str = ""
-            if images:
-                if isinstance(images, list):
-                    images_str = "\nImages: " + " | ".join([str(i) for i in images[:5]])
-                else:
-                    images_str = f"\nImages: {images}"
             if formulas:
                 if isinstance(formulas, list):
                     formulas_str = "\nFormules: " + " | ".join([str(f) for f in formulas[:3]])
@@ -217,13 +237,14 @@ FORMAT DE RÉPONSE OBLIGATOIRE:
 1) Réponse structurée et concise en texte.
 2) NE PAS écrire de phrase d'introduction sur tes sources (ex: "Mes sources sont...", "Je m'appuie sur..."). Les citations sont obligatoires dans le texte via le format [Source: ...].
 3) Toute équation doit être entourée par $$ ... $$ (LaTeX).
-4) À la fin de ta réponse, ajoute **OBLIGATOIREMENT et SILENCIEUSEMENT** ces blocs pour le système :
+4) À la fin de ta réponse, ajoute **OBLIGATOIREMENT et SILENCIEUSEMENT** ces blocs pour le système (sans les mentionner dans ton texte) :
    SOURCES_USED: [document1.pdf, document2.pdf]
    IMAGES_USED: [id_image1, id_image2]
    FOLLOW_UP_QUESTIONS: [Question 1; Question 2; Question 3]
 5) Cite toujours tes sources dans le texte: [Source: document_path, page X]
 6) Si l'info n'est pas dans les documents, dis-le clairement.
 7) Propose 3 à 5 questions courtes et pertinentes en FOLLOW_UP_QUESTIONS.
+8) **NE PAS lister les images disponibles** dans ton texte de réponse. Si tu utilises une image, mentionne-la discrètement ou laisse le système l'afficher via IMAGES_USED.
 
 DOCUMENTS DE RÉFÉRENCE:
 {context}
