@@ -240,7 +240,7 @@
                         {% endif %}
 
                         <div class="subject-actions">
-                            <a href="{{ subject.aws_url }}" target="_blank" class="btn-open">
+                            <a href="{% url 'base:view_subject' subject.id %}" target="_blank" class="btn-open">
                                 📄 View subject
                             </a>
                             <a href="#" class="btn-details">

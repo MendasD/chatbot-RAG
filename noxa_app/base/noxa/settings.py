@@ -92,10 +92,15 @@ WSGI_APPLICATION = 'noxa.wsgi.application'
 # Database configuration
 # Railway provide DATABASE_URL by We use Neon as fallback for production.
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL', 'postgresql://neondb_owner:npg_rleNsy85vcMO@ep-lingering-poetry-aiichweg-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'),
-        conn_max_age=600
-    )
+    # en local, garder sqlite3 par défaut
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+    # 'default': dj_database_url.config(
+    #     default=os.getenv('DATABASE_URL', 'postgresql://neondb_owner:npg_rleNsy85vcMO@ep-lingering-poetry-aiichweg-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'),
+    #     conn_max_age=600
+    # )
 }
 
 
@@ -152,16 +157,17 @@ LOGOUT_REDIRECT_URL = '/login/'  # Redirect to login after logout
 
 # Media files
 # Robust Cloudinary configuration
-cloudinary_url = os.getenv('CLOUDINARY_URL')
+cloudinary_url = os.getenv('CLOUDINARY_URL', 'cloudinary://732974968223895:t6rzUL2tnGvmxzkelPF3zsVp-YY@dsupmimkx')
 if cloudinary_url:
     CLOUDINARY_STORAGE = {
         'CLOUDINARY_URL': cloudinary_url,
     }
+  
 else:
     CLOUDINARY_STORAGE = {
-        'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME', 'deqk7eblq'),
-        'API_KEY': os.getenv('CLOUDINARY_API_KEY', ''),
-        'API_SECRET': os.getenv('CLOUDINARY_API_SECRET', ''),
+        'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME', 'dsupmimkx'),
+        'API_KEY': os.getenv('CLOUDINARY_API_KEY', '732974968223895'),
+        'API_SECRET': os.getenv('CLOUDINARY_API_SECRET', 't6rzUL2tnGvmxzkelPF3zsVp-YY'),
     }
 
 # Modern Django 4.2+ Storage configuration
@@ -198,7 +204,7 @@ HF_TOKEN = os.getenv('HF_TOKEN', None)
 
 # Pinecone
 PINECONE_API_KEY = os.getenv('PINECONE_API_KEY', None)
-PINECONE_INDEX_NAME = os.getenv('PINECONE_INDEX_NAME', 'noxa-rag')
+PINECONE_INDEX_NAME = os.getenv('PINECONE_INDEX_NAME', 'rag-test2')
 PINECONE_EMBED_MODEL = os.getenv('PINECONE_EMBED_MODEL', 'multilingual-e5-large')
 PINECONE_RERANK_MODEL = os.getenv('PINECONE_RERANK_MODEL', 'bge-reranker-v2-m3')
 PINECONE_NAMESPACE = os.getenv('PINECONE_NAMESPACE', '__default__')

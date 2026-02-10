@@ -211,7 +211,7 @@ Réponds uniquement par OUI ou NON."""
             context = PromptTemplates.format_context(retrieved_chunks)
             context_noxa = f"Tu es Noxa AI, l'IA intégrée dans Noxa. Noxa est une application permettant d'aider les les étudiants et chercheurs dans la rédaction de leurs documents académiques et scientifiques, sur divers domaines tels que la mathématiques, l'économie, la statistique, la physique, la chimie, la biologie, etc. Tu dois toujours répondre dans la langue de l'utilisateur."
             topic_line = f"Tu es spécialisé en {topic}." if topic else "Tu es un assistant expert."
-            system_prompt = f"""{topic_line} {context_noxa} Tu réponds en te basant UNIQUEMENT sur les documents fournis.
+            system_prompt = f"""{topic_line} {context_noxa} Tu réponds en te basant UNIQUEMENT sur les documents fournis. Adapte le style du texte selon les besoins
 
 FORMAT DE RÉPONSE OBLIGATOIRE:
 1) Réponse structurée et concise en texte.

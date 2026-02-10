@@ -210,7 +210,7 @@ aside .sd-card {
 
         <div style="text-align:right; display: flex; flex-direction: row; justify-content: space-between;">
           {% if subject.aws_url %}
-            <a href="{{ subject.aws_url }}" target="_blank" class="sd-add-btn" style="background:#0f172a; padding:10px 14px; margin-right: 10px;">Open subject</a>
+            <a href="{% url 'base:view_subject' subject.id %}" target="_blank" class="sd-add-btn" style="background:#0f172a; padding:10px 14px; margin-right: 10px;">Open subject</a>
           {% endif %}
           <div style="height:8px"></div>
           {% if request.user.is_authenticated %}
@@ -283,7 +283,7 @@ aside .sd-card {
 
               <div class="corr-actions">
                 {% if corr.aws_url %}
-                  <a href="{{ corr.aws_url }}" target="_blank" class="corr-view">Open</a>
+                  <a href="{% url 'base:view_correction' corr.id %}" target="_blank" class="corr-view">Open</a>
                 {% else %}
                   <span class="empty-note">No file</span>
                 {% endif %}

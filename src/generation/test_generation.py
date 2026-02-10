@@ -16,23 +16,7 @@ def main():
         provider="novita"
     )
 
-    # Chunks factices pour test
-    # fake_chunks = [
-    #     {
-    #         "id": "chunk_1",
-    #         "score": 0.95,
-    #         "text": "Les déterminants de la pauvreté multidimensionnelle incluent l'éducation, la santé, "
-    #                 "les conditions de logement et l'accès aux services de base.",
-    #         "metadata": {
-    #             "document_name": "rapport_test.pdf",
-    #             "page_numbers": "12",
-    #             "image_paths": ["data/temp/img_45_0.png"],
-    #             "formulas_latex": ["P = a + b"]
-    #         }
-    #     }
-    # ]
-
-        # Initialise le retriever
+    # Initialise le retriever
     retriever = PineconeRetriever(
         api_key=os.getenv("PINECONE_API_KEY"),
         index_name="rag-test2",

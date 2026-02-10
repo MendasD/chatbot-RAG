@@ -108,11 +108,11 @@ class ExtractedDocument:
         return asdict(self)
     
     @staticmethod
-    def create_new(source_file: str):
+    def create_new(source_file: str, uploaded_url: str):
         """Crée un nouveau document vide"""
         return ExtractedDocument(
             document_id=str(uuid.uuid4()),
-            source_file=source_file,
+            source_file=uploaded_url, #source_file,
             filename=source_file.split('/')[-1],
             extraction_date=datetime.now().isoformat(),
             metadata=DocumentMetadata(),

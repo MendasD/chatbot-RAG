@@ -401,7 +401,7 @@ def send_message(request, conversation_id):
                     'attachment_id': att.id if att else None,
                     'type': 'publication' if pub else 'attachment',
                     'title': source_title,
-                    'url': pub.file.url if (pub and pub.file) else (att.file.url if (att and att.file) else '#'),
+                    'url': pub.file_url if (pub and pub.file_url) else (att.file.url if (att and att.file) else '#'),
                     'page_number': source.page_number,
                     'relevance_score': round(source.relevance_score, 2),
                     'excerpt': source.content[:200] + '...' if len(source.content) > 200 else source.content

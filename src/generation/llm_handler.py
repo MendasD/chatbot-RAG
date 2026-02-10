@@ -44,7 +44,7 @@ class LLMHandler:
                 raise ValueError("HF_TOKEN non trouvé. Définissez-le dans .env")
         
         # Initialise le client
-        print(f"🤖 Initialisation LLM Handler...")
+        print(f"! Initialisation LLM Handler...")
         print(f"   Modèle: {model_name}")
         if self.provider:
             print(f"   Provider: {self.provider}")

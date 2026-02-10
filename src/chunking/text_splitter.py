@@ -176,7 +176,7 @@ class SmartTextSplitter:
                     chunk_id=chunk_id,
                     content=expanded_text,
                     document_id=doc.document_id,
-                    document_name=doc.filename,
+                    document_name= doc.source_file ,#doc.filename,
                     page_numbers=[page.page_number],
                     chunk_index=chunk_counter,
                     total_chunks=0,  # Sera mis à jour après
@@ -423,12 +423,13 @@ class SmartTextSplitter:
         for token, data in maps.get('images', {}).items():
             if token in text:
                 image_id = data.get('image_id') #or "unknown"
+                image_path = data.get('image_path')
                 print(f"   🖼️  Insertion image dans chunk: ID={image_id}")
                 desc = data.get('description', '').strip()
                 if desc:
-                    replacement = f"[IMAGE {image_id}] {desc}"
+                    replacement = f"[IMAGE {image_path}] {desc}"
                 else:
-                    replacement = f"[IMAGE {image_id}]"
+                    replacement = f"[IMAGE {image_path}]"
                 text = text.replace(token, replacement)
                 images_used.append(data)
         

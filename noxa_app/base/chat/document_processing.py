@@ -85,7 +85,7 @@ class DocumentProcessingService:
             
             self.pinecone_uploader = PineconeInferenceUploader(
                 api_key=api_key,
-                index_name=getattr(settings, 'PINECONE_INDEX_NAME', 'noxa-rag'),
+                index_name=getattr(settings, 'PINECONE_INDEX_NAME', 'rag-test2'),
                 embed_model=getattr(settings, 'PINECONE_EMBED_MODEL', 'multilingual-e5-large')
             )
             logger.info("✅ Pinecone Uploader initialisé")
@@ -93,10 +93,12 @@ class DocumentProcessingService:
     def process_pdf(
         self,
         pdf_path: str,
+        uploaded_url: str = "",
         metadata: Optional[Dict] = None,
         upload_to_pinecone: bool = True,
         user_id: Optional[int] = None,
-        is_public: bool = False
+        is_public: bool = False,
+        document_name_without_ext: str = ""
     ) -> Dict:
         """
         Traite un PDF complet: extraction → chunking → upload Pinecone
@@ -109,7 +111,7 @@ class DocumentProcessingService:
         Returns:
             Dictionnaire avec les statistiques
         """
-        logger.info(f"🚀 Traitement de: {pdf_path}")
+        logger.info(f" Traitement de: {pdf_path}")
         
         stats = {
             'pdf_path': pdf_path,
@@ -132,7 +134,9 @@ class DocumentProcessingService:
             
             extracted_doc = self.pdf_extractor.extract_pdf(
                 pdf_path,
-                default_metadata=metadata
+                uploaded_url=uploaded_url,
+                default_metadata=metadata,
+                document_name_without_ext=document_name_without_ext
             )
             
             # Sauvegarde le document extrait
@@ -185,6 +189,16 @@ class DocumentProcessingService:
                 logger.info(f"✅ Upload terminé: {upload_stats['uploaded']} chunks")
             
             logger.info("🎉 Traitement complet terminé avec succès!")
+
+            # Phase 4 : Supprimer tous les fichiers temporelles générés
+            try:
+                if os.path.exists(json_path):
+                    os.remove(json_path)
+                if os.path.exists(chunks_path):
+                    os.remove(chunks_path)
+                logger.info("🧹 Fichiers temporaires supprimés")
+            except Exception as e:
+                logger.warning(f"⚠️  Impossible de supprimer les fichiers temporaires: {e}")
             
         except Exception as e:
             logger.error(f"❌ Erreur lors du traitement: {e}")

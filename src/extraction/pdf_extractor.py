@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 import json
 
+from noxa_app.base.base.cloud_service import upload_file_cloudinary
+
 from .document_schemas import (
     ExtractedDocument, 
     PageContent, 
@@ -93,13 +95,14 @@ class PDFExtractor:
                 print(f"⚠️  OCR math indisponible: {e}")
                 self.math_ocr_handler = None
     
-    def extract_pdf(self, pdf_path: str, default_metadata: dict = None) -> ExtractedDocument:
+    def extract_pdf(self, pdf_path: str, uploaded_url: str="" , default_metadata: dict = None, document_name_without_ext: str="") -> ExtractedDocument:
         """
         Extrait le contenu complet d'un PDF
         
         Args:
             pdf_path: Chemin vers le fichier PDF
             default_metadata: Métadonnées par défaut à utiliser si absentes du PDF
+            document_name_without_ext: Nom du document sans extension
             
         Returns:
             ExtractedDocument avec tout le contenu structuré
@@ -109,7 +112,7 @@ class PDFExtractor:
         print(f"\n📄 Extraction de: {pdf_path}")
         
         # Crée le document
-        doc = ExtractedDocument.create_new(pdf_path)
+        doc = ExtractedDocument.create_new(source_file=pdf_path, uploaded_url=uploaded_url)
         
         # Ouvre le PDF
         try:
@@ -144,7 +147,8 @@ class PDFExtractor:
                 page_content = self._extract_page(
                     pdf_doc, 
                     page_num, 
-                    is_scanned
+                    is_scanned,
+                    document_name_without_ext=document_name_without_ext
                 )
                 doc.pages.append(page_content)
                 
@@ -279,7 +283,8 @@ class PDFExtractor:
         self, 
         pdf_doc, 
         page_num: int, 
-        is_scanned: bool
+        is_scanned: bool,
+        document_name_without_ext: str,
     ) -> PageContent:
         """
         Extrait le contenu d'une page
@@ -303,7 +308,7 @@ class PDFExtractor:
             extraction_method = "ocr"
         else:
             # Extraction normale avec PyMuPDF
-            blocks = self._extract_with_pymupdf(page, page_num)
+            blocks = self._extract_with_pymupdf(page, page_num, document_name_without_ext=document_name_without_ext)
         
         # Prétraitement
         blocks = self.preprocessor.preprocess_blocks(blocks)
@@ -320,7 +325,7 @@ class PDFExtractor:
             extraction_method=extraction_method # Spécifier la méthode d'extraction qui a été utilisée
         )
     
-    def _extract_with_pymupdf(self, page, page_num: int) -> List[ContentBlock]:
+    def _extract_with_pymupdf(self, page, page_num: int, document_name_without_ext: str) -> List[ContentBlock]:
         """Extrait le contenu avec PyMuPDF"""
         blocks = []
         
@@ -351,7 +356,7 @@ class PDFExtractor:
                         
                         if not self.math_ocr_handler:
                             self._init_math_ocr_handler()
-                            print(f" ℹ️  Handler OCR math initialisé")
+                            print(f" Handler OCR math initialisé")
 
                         if self.math_ocr_handler:
                             formula_block = self._extract_formula_from_block(
@@ -379,7 +384,8 @@ class PDFExtractor:
                         page, 
                         block, 
                         page_num,
-                        block_idx
+                        block_idx,
+                        document_name_without_ext=document_name_without_ext,
                     )
                     if image_block:
                         blocks.append(image_block)
@@ -413,7 +419,8 @@ class PDFExtractor:
         page, 
         image_block: dict, 
         page_num: int,
-        img_idx: int
+        img_idx: int,
+        document_name_without_ext: str,
     ) -> Optional[ContentBlock]:
         """Extrait et traite une image (PyMuPDF)"""
         try:
@@ -440,7 +447,7 @@ class PDFExtractor:
                     image = Image.open(io.BytesIO(image_data))
             else:
                 # Fallback: rasteriser la zone de l'image si xref invalide
-                print(f"    ⚠️  xref non valide ({type(xref).__name__}); rasterisation bbox pour page {page_num + 1}")
+                print(f" xref non valide ({type(xref).__name__}); rasterisation bbox pour page {page_num + 1}")
                 clip_rect = fitz.Rect(
                     image_block["bbox"][0],
                     image_block["bbox"][1],
@@ -465,14 +472,15 @@ class PDFExtractor:
                 image.save(img_byte_arr, format='PNG')
                 img_byte_arr = img_byte_arr.getvalue()
                 
-                upload_result = cloudinary.uploader.upload(
-                    img_byte_arr,
-                    public_id=f"rag_extracted/{image_id}",
-                    overwrite=True,
-                    resource_type="image"
-                )
-                image_url = upload_result.get('secure_url')
-                print(f" ✅ Image uploadée: {image_url}")
+                # upload_result = cloudinary.uploader.upload(
+                #     img_byte_arr,
+                #     public_id=f"rag_extracted/{image_id}",
+                #     overwrite=True,
+                #     resource_type="image"
+                # )
+                # image_url = upload_result.get('secure_url')
+                image_url = upload_file_cloudinary(file=img_byte_arr, public_id=image_id, folder=f"rag-images/{document_name_without_ext}")
+                print(f" ✅ Image uploadée sur cloudinary : {image_url}")
             except Exception as e:
                 print(f" ⚠️ Echec upload Cloudinary: {e}. Sauvegarde locale en fallback.")
                 image_path = self.temp_dir / f"{image_id}.png"
@@ -484,7 +492,7 @@ class PDFExtractor:
             
             if not self.ocr_handler:
                 self._init_ocr_handler()
-                print(f"    ℹ️  Handler OCR initialisé pour la description d'image")
+                print(f" !!! Handler OCR initialisé pour la description d'image")
             if self.use_ocr_for_images and self.ocr_handler:
                 print(f"🔍 Extraction de la description pour l'image {image_id} sur la page {page_num + 1} avec OCR docTR")
                 desc_block = self.ocr_handler.process_image_for_description(
@@ -494,7 +502,7 @@ class PDFExtractor:
                 )
                 description = desc_block.image_description or ""
             else:
-                print(f"    ℹ️  OCR pour images désactivé; pas de description pour l'image {image_id}")
+                print(f" OCR pour images désactivé; pas de description pour l'image {image_id}")
             
             return ContentBlock(
                 type="image",

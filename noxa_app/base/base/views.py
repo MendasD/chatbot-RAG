@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import boto3
 from django.utils.timezone import now
 from django.utils.timesince import timesince
 from django.shortcuts import render, redirect
@@ -24,7 +25,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from base.aws_service import upload_file_to_s3
+#from noxa_app.base.base.cloud_service import upload_file_to_s3
 from base.forms import ClassesForm, CoursesForm, SpecializationForm
 
 from .models import Classes, Comments, Corrections, Courses, Specialization, Subjects, Topic, Tag, Publication, Message, Collection, CollectionPublication, Notification, Discussion, track_search_click
@@ -33,20 +34,11 @@ from django.db.models import Count
 from django.contrib.auth import get_user_model
 from django.conf import settings
 import cloudinary
-
-# Initialize Cloudinary if configured
-if hasattr(settings, 'CLOUDINARY_STORAGE'):
-    cloudinary_config = settings.CLOUDINARY_STORAGE
-    if 'CLOUDINARY_URL' in cloudinary_config:
-        cloudinary.config(cloudinary_url=cloudinary_config['CLOUDINARY_URL'])
-    else:
-        cloudinary.config(
-            cloud_name=cloudinary_config.get('CLOUD_NAME'),
-            api_key=cloudinary_config.get('API_KEY'),
-            api_secret=cloudinary_config.get('API_SECRET'),
-            secure=True
-        )
-
+from .cloud_service import upload_file_cloudinary, upload_file_to_s3, get_signed_url
+import re
+import requests
+from chat.document_processing import get_document_processing_service
+import tempfile
 
 def home(request):
     """
@@ -528,39 +520,114 @@ def createPublication(request):
         authors_str = request.POST.get('authors', '')
         tags_str = request.POST.get('tags', '')
         file = request.FILES.get('file')
+
+        if file:
+
+            # get the file name  without the extension
+            file_basename = os.path.basename(file.name)
+            file_name_without_extension = os.path.splitext(file.name)[0]
         
-        # Handle topic
-        topic, _ = Topic.objects.get_or_create(name=topic_name)
-        
-        # Create publication
-        publication = Publication.objects.create(
-            theme=theme,
-            topic=topic,
-            affiliations = affiliations,
-            description=description,
-            summary=summary,
-            file=file,
-            user=request.user  # assuming current user is main author
-        )
-        
-        # Handle additional authors
-        if authors_str:
-            author_usernames = [username.strip() for username in authors_str.split(',') if username.strip()]
-            for username in author_usernames:
-                try:
-                    author = get_user_model().objects.get(username=username)
-                    publication.authors.add(author)
-                except get_user_model().DoesNotExist:
-                    pass  # Skip if author doesn't exist
-        
-        # Handle tags
-        if tags_str:
-            tag_names = [tag_name.strip() for tag_name in tags_str.split(',') if tag_name.strip()]
-            for tag_name in tag_names:
-                tag, _ = Tag.objects.get_or_create(name=tag_name)
-                publication.tags.add(tag)
-        
-        return redirect('base:publication', pk=publication.pk)
+            # Handle topic
+            topic, _ = Topic.objects.get_or_create(name=topic_name)
+
+            # Preparing the default metadata for RAG Service
+            default_metadata = {}
+            default_metadata['subject'] = topic_name
+
+            # save the file in the cloud and get the url
+            # file_url = upload_file_cloudinary(file=file, file_type="raw", folder="documents/memoires", public_id=file_name_without_extension  )
+
+            # Lire le contenu du fichier AVANT l'upload S3
+            file_content = file.read()
+            file.seek(0)  # Remettre au début pour S3
+            
+            # Upload to aws
+            try:
+                file_url = upload_file_to_s3(file=file, s3_path=f"documents/memoires/{file_basename}", public=True)
+                print(f"File uploaded to S3: {file_url}")
+            except Exception as e:
+                print(f"Error uploading file to S3: {e}")
+                messages.error(request, f"Erreur lors de l'upload du fichier: {e}")
+                # Nettoyer le fichier temporaire
+                if temp_path and os.path.exists(temp_path):
+                    os.remove(temp_path)
+                return render(request, 'base/publication_form.html')
+            
+
+            # Create publication
+            publication = Publication.objects.create(
+                theme=theme,
+                topic=topic,
+                affiliations = affiliations,
+                description=description,
+                summary=summary,
+                #file=file,
+                file_url = file_url,
+                file_basename = file_basename,
+                user=request.user  # assuming current user is main author
+            )
+
+            default_metadata['title'] = theme
+            default_metadata['author'] = [request.user.username]
+            # Handle additional authors
+            if authors_str:
+                author_usernames = [username.strip() for username in authors_str.split(',') if username.strip()]
+                for username in author_usernames:
+                    try:
+                        default_metadata['author'].append(username)
+                        author = get_user_model().objects.get(username=username)
+                        publication.authors.add(author)
+                    except get_user_model().DoesNotExist:
+                        pass  # Skip if author doesn't exist
+            
+            # Handle tags
+            default_metadata['keywords'] = []
+            if tags_str:
+                tag_names = [tag_name.strip() for tag_name in tags_str.split(',') if tag_name.strip()]
+                for tag_name in tag_names:
+                    default_metadata['keywords'].append(tag_name)
+                    tag, _ = Tag.objects.get_or_create(name=tag_name)
+                    publication.tags.add(tag)
+
+            messages.success(request, 'Publication created successfully!')
+            
+            # Process document for Pinecone
+            temp_path = None
+            try:
+                print("Starting processing for pinecone")
+                # Créer le fichier temporaire depuis le fichier Django réinitialisé
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                    tmp.write(file_content)
+                    temp_path = tmp.name
+                print(f"File saved at: {temp_path}")
+                
+                # Process the document for the vectorial database
+                processing_service = get_document_processing_service()
+                processing_service.process_pdf(
+                    pdf_path=temp_path,
+                    uploaded_url=file_url,
+                    metadata=default_metadata,
+                    document_name_without_ext=file_name_without_extension
+                    )
+                print("Pinecone processing completed")
+
+            except Exception as e:
+                print(f"Error processing document: {e}")
+                messages.warning(request, f"Document publié mais erreur lors de l'indexation: {e}")
+            
+            finally:
+                # Nettoyer le fichier temporaire
+                if temp_path and os.path.exists(temp_path):
+                    try:
+                        os.remove(temp_path)
+                        print(f"Temp file {temp_path} deleted successfully")
+                    except Exception as e:
+                        print(f"Error deleting temp file: {e}")
+            
+            return redirect('base:publication', pk=publication.pk)
+        else:
+            messages.error("Veuillez charger un fichier")
+            return render(request, 'base/publication_form.html')
     
     # Handle GET request
     return render(request, 'base/publication_form.html')
@@ -643,35 +710,17 @@ def viewPdf(request, pk: str):
     """
     
     pub = get_object_or_404(Publication, id=pk)
-    
-    from django.http import FileResponse
-    
+
     try:
-        # We serve the file directly from the server.
-        # This is the most robust way because it uses our server-side credentials
-        # and avoids any client-side signature/401 errors from Cloudinary.
-        
-        # open() on a FileField handle works with both local and remote storages
-        try:
-            file_handle = pub.file.open('rb')
-        except Exception as open_err:
-            logger.error(f"Failed to open storage handle for {pk}: {open_err}")
-            raise Http404(f"File handle inaccessible: {open_err}")
-            
-        # FileResponse is efficient for streaming large files
-        response = FileResponse(file_handle, content_type='application/pdf')
-        
-        # Use simple ASCII filename to avoid header encoding issues
-        try:
-            filename = os.path.basename(pub.file.name)
-            if not filename.lower().endswith('.pdf'):
-                filename += '.pdf'
-        except:
-            filename = f"document_{pk}.pdf"
-            
-        response['Content-Disposition'] = f'inline; filename="{filename}"'
-        return response
-            
+        # get the aws key from the aws url
+        s3_key = f'documents/memoires/{pub.file_url.split("/")[-1]}'
+
+        url = get_signed_url(s3_key, expiration=3600)
+
+        if url == None:
+            raise Http404("Document not found")
+
+        return HttpResponseRedirect(url)     
     except Exception as e:
         logger.error(f"Unexpected error serving PDF {pk}: {e}")
         error_msg = str(e)
@@ -1519,7 +1568,7 @@ def baki(request):
                     ext = os.path.splitext(file.name)[1]
                     formated_name = f"{course}_{class_level}_{academic_year}_semester-{semester}{ext}"
                     # upload the file
-                    subject_url = upload_file_to_s3(file, f"subjects/{formated_name}")
+                    subject_url = upload_file_to_s3(file, f"documents/subjects/{formated_name}")
 
                     if not subject_url:
                         return JsonResponse({"error": "Error uploading file."}, status=400)
@@ -1543,7 +1592,7 @@ def baki(request):
                     if correction_file:
                         ext = os.path.splitext(correction_file.name)[1]
                         correction_formated_name = f"{course}_{class_level}_{academic_year}_semester-{semester}_correction{ext}"
-                        correction_url = upload_file_to_s3(correction_file, f"Corrections/{correction_formated_name}")
+                        correction_url = upload_file_to_s3(correction_file, f"documents/corrections/{correction_formated_name}")
 
                         if not correction_url:
                             return JsonResponse({"error": "Error uploading correction file."}, status=400)
@@ -1581,6 +1630,55 @@ def baki(request):
             'academic_years': academic_years,
        }
     return render(request, "base/baki.html", context=context)
+
+def viewSubject(request, pk: str):
+    """
+    Docstring for viewSubject
+    
+    :param request: 
+    :param pk: the primary key of the subject (identifier)
+    :type pk: str
+    """
+    subject = get_object_or_404(Subjects, id=pk)
+    try:
+        # get the aws key from the aws url
+        s3_key = f'documents/subjects/{subject.aws_url.split("/")[-1]}'
+
+        url = get_signed_url(s3_key, expiration=3600)
+
+        if url == None:
+            raise Http404("Subject not found")
+
+        return HttpResponseRedirect(url)     
+    except Exception as e:
+        logger.error(f"Unexpected error serving PDF {pk}: {e}")
+        error_msg = str(e)
+        raise Http404(f"Internal error while loading PDF: {error_msg}")
+    
+
+def viewCorrection(request, pk: str):
+    """
+    viewCorrection allow to read a correction, having thr aws url
+    
+    :param request: Description
+    :param pk: the primary key of the correction (identifier)
+    :type pk: str
+    """
+    subject = get_object_or_404(Corrections, id=pk)
+    try:
+        # get the aws key from the aws url
+        s3_key = f'documents/corrections/{subject.aws_url.split("/")[-1]}'
+
+        url = get_signed_url(s3_key, expiration=3600)
+
+        if url == None:
+            raise Http404("Document not found")
+
+        return HttpResponseRedirect(url)     
+    except Exception as e:
+        logger.error(f"Unexpected error serving PDF {pk}: {e}")
+        error_msg = str(e)
+        raise Http404(f"Internal error while loading PDF: {error_msg}")
 
 
 def ajax_filter_courses(request):
@@ -1728,7 +1826,7 @@ def add_correction(request, pk: str):
                 ext = os.path.splitext(file.name)[1]
                 formated_name = f"{subject.formated_name}_correction{ext}"
                 # upload the file
-                correction_url = upload_file_to_s3(file, f"Corrections/{formated_name}")
+                correction_url = upload_file_to_s3(file, f"documents/corrections/{formated_name}")
 
                 if not correction_url:
                     return JsonResponse({"error": "Error uploading file."}, status=400)

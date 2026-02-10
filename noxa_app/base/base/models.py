@@ -59,9 +59,13 @@ class Publication(models.Model):
     )
     file = models.FileField(
         upload_to=utils.pdfUploadPath, 
-        validators=[utils.validatePdf]
+        validators=[utils.validatePdf], 
+        help_text="Upload a PDF file",
+        blank=True, 
+        null=True
     )
-    
+    file_url = models.URLField(blank=True, null=True)
+    file_basename = models.CharField(max_length=100, blank=True, null=True)
     description = models.TextField(null=True, blank=True)
     summary = models.TextField(null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)

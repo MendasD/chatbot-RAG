@@ -196,7 +196,12 @@ class PineconeInferenceUploader:
         sanitized = {}
         
         for key, value in metadata.items():
-            if isinstance(value, (str, int, float, bool)) or value is None:
+
+            if value is None:
+                sanitized[key] = ""
+                continue
+
+            if isinstance(value, (str, int, float, bool)):
                 sanitized[key] = value
                 continue
             

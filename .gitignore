@@ -30,5 +30,23 @@ staticfiles/
 media/
 
 # Ignorer les fichiers d'environnement avec clés API
+.env
 .env.local
 .env.production
+
+# Ignorer les fichiers temporaires ou générés
+*.tmp
+*.swp
+*~
+temp/
+llm_context.txt
+llama_prompt.txt
+
+# Données RAG
+*.pdf
+*.txt
+*.json
+*.pkl
+*.npy
+*.faiss
+*.db
