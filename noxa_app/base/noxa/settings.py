@@ -92,15 +92,11 @@ WSGI_APPLICATION = 'noxa.wsgi.application'
 # Database configuration
 # Railway provide DATABASE_URL by We use Neon as fallback for production.
 DATABASES = {
-    # en local, garder sqlite3 par défaut
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-    # 'default': dj_database_url.config(
-    #     default=os.getenv('DATABASE_URL', 'postgresql://neondb_owner:npg_rleNsy85vcMO@ep-lingering-poetry-aiichweg-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'),
-    #     conn_max_age=600
-    # )
+    
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL', 'postgresql://neondb_owner:npg_rleNsy85vcMO@ep-lingering-poetry-aiichweg-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'),
+        conn_max_age=600
+    )
 }
 
 
