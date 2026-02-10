@@ -543,8 +543,15 @@
                   {% for comment in comments %}
                   <div class="comment">
                     <div class="comment-head">
-                      <div><strong>{% if comment.author %}{{ comment.author.username }}{% else %}Anonymous{% endif
-                          %}</strong></div>
+                      <div>
+                        <strong>
+                            {% if comment.author %}
+                              {{ comment.author.username }}
+                            {% else %}
+                              Anonymous
+                            {% endif %}
+                        </strong>
+                      </div>
                       <div><small>{{ comment.createdAt|timesince}} ago</small></div>
                     </div>
                     <div class="comment-body">{{ comment.body }}</div>
