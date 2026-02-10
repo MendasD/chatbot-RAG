@@ -212,7 +212,7 @@ class DjangoRAGService:
             enriched_chunks = []
             retrieval_time = (time.time() - retrieval_start) * 1000
         
-        from noxa_app.base.base.models import Publication, ChatAttachment
+        from base.models import Publication, ChatAttachment
 
         # Convertit les EnrichedChunk en format dict pour le LLM
         retrieved_chunks = []
