@@ -212,7 +212,8 @@ class DjangoRAGService:
             enriched_chunks = []
             retrieval_time = (time.time() - retrieval_start) * 1000
         
-        from base.models import Publication, ChatAttachment
+        from base.models import Publication
+        from chat.models import ChatAttachment
 
         # Convertit les EnrichedChunk en format dict pour le LLM
         retrieved_chunks = []
