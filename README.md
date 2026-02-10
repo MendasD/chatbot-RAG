@@ -87,7 +87,7 @@ NOXA est une plateforme web intelligente permettant de gérer, partager et inter
 ### 1. Cloner le repository
 
 ```bash
-git clone [https://github.com/votre-username/noxa.git](https://github.com/MendasD/chatbot-RAG.git)
+git clone [https://github.com/MendasD/chatbot-RAG.git](https://github.com/MendasD/chatbot-RAG.git)
 cd noxa
 ```
 
