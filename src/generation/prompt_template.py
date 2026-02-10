@@ -237,13 +237,14 @@ FORMAT DE RÉPONSE OBLIGATOIRE:
 1) Réponse structurée et concise en texte.
 2) NE PAS écrire de phrase d'introduction sur tes sources (ex: "Mes sources sont...", "Je m'appuie sur..."). Les citations sont obligatoires dans le texte via le format [Source: ...].
 3) Toute équation doit être entourée par $$ ... $$ (LaTeX).
-4) À la fin de ta réponse, ajoute **OBLIGATOIREMENT et SILENCIEUSEMENT** ces blocs pour le système (sans les mentionner dans ton texte) :
-   SOURCES_USED: [document1.pdf, document2.pdf]
-   IMAGES_USED: [id_image1, id_image2]
-   FOLLOW_UP_QUESTIONS: [Question 1; Question 2; Question 3] séparées par des points-virgules
-5) Cite toujours tes sources dans le texte: [Source: lien_document, page X]
-6) Si l'info n'est pas dans les documents, dis-le clairement.
-7) Propose 3 à 5 questions courtes et pertinentes en FOLLOW_UP_QUESTIONS.
+4) À la fin de ta réponse, ajoute ces blocs techniques :
+   SOURCES_USED: [nom1.pdf, nom2.pdf]
+   IMAGES_USED: [id1, id2]
+   FOLLOW_UP_QUESTIONS: [Question 1?; Question 2?; Question 3?]
+5) **IMPORTANT** : Donne les vrais noms de fichiers dans SOURCES_USED (ex: "rapport.pdf").
+6) **CITE TOUJOURS** tes sources dans le texte avec [Source: Nom_Document, page X]. N'utilise JAMAIS "lien_document".
+7) Si l'info n'est pas dans les documents, dis-le clairement.
+8) Propose 3 à 5 questions courtes et pertinentes dans FOLLOW_UP_QUESTIONS.
 8) **NE PAS lister les images disponibles** dans ton texte de réponse. Si tu utilises une image, mentionne-la discrètement ou laisse le système l'afficher via IMAGES_USED.
 
 DOCUMENTS DE RÉFÉRENCE:
@@ -319,8 +320,8 @@ DOCUMENTS DE RÉFÉRENCE:
                 # On prend soit le contenu entre crochets (group 1) soit le reste (group 2)
                 content = (match.group(1) or match.group(2) or "").strip()
                 
-                # Parse la liste (split par , ou ; ou retour à la ligne)
-                items = [item.strip() for item in re.split(r'[;,\n]', content) if item.strip()]
+                # Parse la liste (split par , ou ; ou \n ou par '?' suivi d'un espace ou fin de ligne)
+                items = [item.strip() for item in re.split(r'[;,\n]|(?<=\?)(?=\s|$)', content) if item.strip()]
                 # Nettoyage supplémentaire pour enlever les crochets résiduels si group 2 a été utilisé
                 items = [item.strip('[] ') for item in items]
                 metadata[key] = [i for i in items if i]

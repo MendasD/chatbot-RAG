@@ -546,7 +546,19 @@ class NoxaChat {
             </div>
         `;
 
+        // Sécurité : si on reçoit une seule string contenant plusieurs questions
+        let processedQuestions = [];
         questions.forEach(q => {
+            if (typeof q === 'string' && q.includes('?') && q.length > 50) {
+                // Split par '?' suivi d'un espace ou fin de ligne
+                const split = q.split(/(?<=\?)(?=\s|$)/).map(s => s.trim()).filter(s => s.length > 0);
+                processedQuestions = [...processedQuestions, ...split];
+            } else {
+                processedQuestions.push(q);
+            }
+        });
+
+        processedQuestions.forEach(q => {
             const btn = document.createElement('button');
             btn.className = 'follow-up-btn';
             btn.textContent = q;
