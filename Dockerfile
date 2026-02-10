@@ -36,7 +36,7 @@ RUN python noxa_app/base/manage.py collectstatic --noinput || true
 EXPOSE ${PORT}
 
 # Run migrations and start the application using gunicorn
-# Note: HF_TOKEN and PINECONE_API_KEY should be set in Railway environment variables
+# Note: HF_TOKEN and PINECONE_API_KEY should be set in Railway environment variablesvvg
 # --timeout 300: Allow 5 minutes for PDF processing
 # --workers 2: Use 2 workers for better concurrency
 # --threads 2: Use 2 threads per worker
