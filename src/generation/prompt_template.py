@@ -328,8 +328,9 @@ DOCUMENTS DE RÉFÉRENCE:
                 # Retire le bloc de la réponse
                 clean_response = clean_response.replace(full_match, '')
         
-        # Nettoyage final des espaces multiples et lignes vides
-        clean_response = re.sub(r'\n{3,}', '\n\n', clean_response).strip()
+        # Nettoyage final des espaces multiples, lignes vides et symboles résiduels (comme **)
+        clean_response = re.sub(r'\n{3,}', '\n\n', clean_response)
+        clean_response = re.sub(r'\s*\**\s*$', '', clean_response).strip()
         
         return {
             'clean_response': clean_response,
