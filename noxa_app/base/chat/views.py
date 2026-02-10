@@ -18,7 +18,7 @@ from django.utils import timezone
 from .models import Conversation, ChatMessage, ChatSource, ChatFeedback
 from .services import get_rag_service
 from base.models import Topic, Publication
-from base.cloud_service import get_signed_url
+from base.cloud_service import get_signed_url, upload_file_to_s3
 
 logger = logging.getLogger('services.rag')
 
@@ -245,6 +245,14 @@ def send_message(request, conversation_id):
                 file_size=f.size,
                 file_type=f.content_type
             )
+            
+            # Upload to S3 for secure RAG access (using filename)
+            try:
+                s3_path = f"documents/attachments/{f.name}"
+                upload_file_to_s3(f, s3_path, public=True)
+                logger.info(f"✅ Attachment uploaded to S3: {s3_path}")
+            except Exception as e:
+                logger.error(f"❌ Error uploading attachment to S3: {e}")
             
             # Optional: Save to personal space (Publications)
             if save_to_space:
@@ -657,9 +665,8 @@ def viewChatAttachment(request, pk):
     attachment = get_object_or_404(ChatAttachment, id=pk)
     
     try:
-        # On extrait la clé S3 de l'URL du fichier (Stocké dans chat_attachments/)
-        # file.name contient le chemin relatif par rapport à MEDIA_ROOT
-        s3_key = attachment.file.name
+        # On utilise le chemin S3 où le fichier a été uploadé dans send_message
+        s3_key = f"documents/attachments/{attachment.filename}"
         
         # Génère l'URL présignée
         url = get_signed_url(s3_key, expiration=3600)
