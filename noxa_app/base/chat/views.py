@@ -108,7 +108,7 @@ def conversation_view(request, conversation_id):
                 unique_docs[name] = {
                     'id': f"pub_{source.publication.id}",
                     'title': name,
-                    'url': source.publication.file.url if source.publication.file else '#',
+                    'url': f'/viewPdf/{source.publication.id}/',  # Use Django view for presigned URL
                     'icon': 'pdf'
                 }
         elif source.attachment:
@@ -117,7 +117,7 @@ def conversation_view(request, conversation_id):
                 unique_docs[name] = {
                     'id': f"att_{source.attachment.id}",
                     'title': name,
-                    'url': source.attachment.file.url,
+                    'url': source.attachment.file.url,  # Cloudinary URL, no presigning needed
                     'icon': 'pdf' if name.lower().endswith('.pdf') else 'file'
                 }
 
@@ -395,13 +395,21 @@ def send_message(request, conversation_id):
                     page_number=source.page_number
                 )
                 
+                # Build URL that goes through Django view (which generates presigned URL)
+                if pub:
+                    source_url = f'/viewPdf/{pub.id}/'
+                elif att:
+                    source_url = att.file.url  # Attachments are on Cloudinary, no presigning needed
+                else:
+                    source_url = '#'
+                
                 sources_data.append({
                     'id': pub.id if pub else att.id,
                     'publication_id': pub.id if pub else None,
                     'attachment_id': att.id if att else None,
                     'type': 'publication' if pub else 'attachment',
                     'title': source_title,
-                    'url': pub.file_url if (pub and pub.file_url) else (att.file.url if (att and att.file) else '#'),
+                    'url': source_url,
                     'page_number': source.page_number,
                     'relevance_score': round(source.relevance_score, 2),
                     'excerpt': source.content[:200] + '...' if len(source.content) > 200 else source.content
