@@ -792,6 +792,15 @@ body .footer {
     color: var(--primary-blue);
 }
 
+/* Message extras (images, follow-up questions) */
+.message-extras {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    /* Par défaut à gauche pour les images */
+}
+
 /* ============================================
    ÉCRAN DE BIENVENUE
    ============================================ */
@@ -1624,12 +1633,12 @@ body .footer {
 /* Questions follow-up */
 .follow-up-container {
     margin-top: 24px;
-    margin-left: auto;
+    margin-left: auto !important;
     /* Pousse le conteneur vers la droite */
     display: none;
     flex-direction: column;
     align-items: flex-end;
-    align-self: flex-end;
+    align-self: flex-end !important;
     gap: 10px;
     max-width: 85%;
     /* Limite la largeur comme les messages utilisateur */
