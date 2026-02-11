@@ -102,9 +102,8 @@ Réponds uniquement par OUI ou NON."""
             # Informations de source
             doc_path = metadata.get('document_path') or metadata.get('document_name') or 'Document inconnu'
             pages = metadata.get('page_numbers', 'Page inconnue')
-            doc_url = metadata.get('url')
             
-            url_str = f" [Lien: {doc_url}]" if doc_url else ""
+            url_str = "" # Ne jamais donner l'URL brute au LLM
             
             # Format pages
             if isinstance(pages, list):
@@ -242,12 +241,12 @@ RÈGLES DE RÉPONSE :
 3) **NE JAMAIS** afficher d'URL brute (http...) dans ta réponse. Le système se charge de générer les liens à partir de tes citations.
 4) Si les documents contiennent des informations complémentaires ou contradictoires, mentionne-les pour donner la vision la plus large possible.
 5) Toute équation doit être entourée par $$ ... $$ (LaTeX).
-6) À la fin de ta réponse, ajoute ces blocs techniques (NE PAS LES TRADUIRE) :
-   SOURCES_USED: [nom1.pdf, nom2.pdf]
-   IMAGES_USED: [id1, id2]
+6) À la fin de ta réponse, ajoute UNIQUEMENT si tu as utilisé des documents ou images, ces blocs techniques :
+   SOURCES_USED: [nom_du_fichier1.pdf, nom_du_fichier2.pdf]
+   IMAGES_USED: [ID_image1, ID_image2]
    FOLLOW_UP_QUESTIONS: [Question 1?; Question 2?; Question 3?]
 
-**ATTENTION :** Les mots SOURCES_USED, IMAGES_USED et FOLLOW_UP_QUESTIONS doivent rester en ANGLAIS.
+**ATTENTION :** Ne JAMAIS laisser les noms d'exemples "nom1.pdf" ou "id1" si tu n'as pas de vraies sources. Si tu n'as pas d'images, laisse IMAGES_USED vide : []. Les mots SOURCES_USED, IMAGES_USED et FOLLOW_UP_QUESTIONS doivent rester en ANGLAIS.
 
 DOCUMENTS DE RÉFÉRENCE :
 {context}
@@ -312,32 +311,44 @@ DOCUMENTS DE RÉFÉRENCE :
             final_lines = []
             
             tag_patterns = {
-                'sources_used': re.compile(r'^(?:SOURCES_USED|SOURCES_UTILISEES|SOURCES_UTILISEE|SOURCE_USED)\s*:\s*(.*)', re.I),
-                'images_used': re.compile(r'^(?:IMAGES_USED|IMAGES_UTILISEES|IMAGES_UTILISEE|IMAGE_USED)\s*:\s*(.*)', re.I),
-                'equations_used': re.compile(r'^(?:EQUATIONS_USED|FORMULES_UTILISEES|EQUATION_USED)\s*:\s*(.*)', re.I),
-                'follow_up_questions': re.compile(r'^(?:FOLLOW_UP_QUESTIONS|FOLLOW_UP_QUESTION|QUESTIONS_SUGGEREES|SUITE_DE_QUESTION|SUITE_DE_QUESTIONS)\s*:\s*(.*)', re.I)
+                'sources_used': re.compile(r'(?:SOURCES_USED|SOURCES_UTILISEES|SOURCES_UTILISEE|SOURCE_USED)\s*:\s*(.*)', re.I),
+                'images_used': re.compile(r'(?:IMAGES_USED|IMAGES_UTILISEES|IMAGES_UTILISEE|IMAGE_USED)\s*:\s*(.*)', re.I),
+                'equations_used': re.compile(r'(?:EQUATIONS_USED|FORMULES_UTILISEES|EQUATION_USED)\s*:\s*(.*)', re.I),
+                'follow_up_questions': re.compile(r'(?:FOLLOW_UP_QUESTIONS|FOLLOW_UP_QUESTION|QUESTIONS_SUGGEREES|SUITE_DE_QUESTION|SUITE_DE_QUESTIONS)\s*:\s*(.*)', re.I)
             }
+
+            dummy_values = ['nom1.pdf', 'nom2.pdf', 'nom_du_fichier1.pdf', 'id1', 'id2', 'id_image1', 'question 1?', 'question 2?']
 
             for line in lines:
                 matched = False
+                clean_line = line.strip()
+                if not clean_line:
+                    continue
+
                 for key, pattern in tag_patterns.items():
-                    match = pattern.match(line.strip())
+                    match = pattern.search(clean_line)
                     if match:
                         content = match.group(1).strip()
                         # Nettoie les crochets si présents
                         content = content.strip('[] ')
                         # Split les items
                         items = [item.strip() for item in re.split(r'[;,\n]', content) if item.strip()]
-                        # Nettoyage supplémentaire des guillemets
-                        items = [item.strip('"\' ') for item in items]
-                        metadata[key].extend(items)
+                        # Nettoyage supplémentaire des guillemets et filtrage des dummies
+                        cleaned_items = []
+                        for item in items:
+                            val = item.strip('"\' ').lower()
+                            if val not in dummy_values and not val.startswith('nom_du_fichier'):
+                                cleaned_items.append(item.strip('"\' '))
+                        
+                        metadata[key].extend(cleaned_items)
                         matched = True
                         break
                 
                 if not matched:
                     # Garde la ligne si ce n'est pas un bloc de métadonnées
-                    # On vérifie seulement les tags les plus fréquents pour éviter de tout supprimer
-                    if not any(tag in line.upper() for tag in ['SOURCES_USED:', 'IMAGES_USED:', 'FOLLOW_UP_QUESTIONS:']):
+                    # On vérifie plus largement pour éviter que les tags restent dans le texte si le regex rate
+                    upper_line = clean_line.upper()
+                    if not any(tag in upper_line for tag in ['SOURCES_USED', 'IMAGES_USED', 'FOLLOW_UP_QUESTIONS', 'EQUATIONS_USED']):
                         final_lines.append(line)
             
             clean_response = '\n'.join(final_lines).strip()
