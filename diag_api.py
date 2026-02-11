@@ -73,7 +73,7 @@ def test_apis():
         model = "meta-llama/Llama-3.1-8B-Instruct"
         res = client.chat.completions.create(
             model=model,
-            messages=[{"role": "user", "content": "Dit test"}],
+            messages=[{"role": "user", "content": "Répète juste le mot 'Succès'"}],
             max_tokens=10
         )
         print(f"   ✅ OK. Réponse: {res.choices[0].message.content.strip()}")

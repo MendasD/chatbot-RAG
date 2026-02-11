@@ -269,8 +269,10 @@ class DjangoRAGService:
             logger.info(f"✅ Réponse générée en {gen_time:.2f}ms")
         except Exception as e:
             logger.error(f"❌ Erreur génération: {e}")
-            logger.error(traceback.format_exc())
-            answer = self._generate_fallback_response(query, retrieved_chunks) # Utilise retrieved_chunks qui a doc_url
+            print(f"❌ ERREUR GENERATION RAG: {e}")
+            import traceback
+            traceback.print_exc()
+            answer = self._generate_fallback_response(query, retrieved_chunks)
             gen_time = (time.time() - gen_start) * 1000
         
         # 3. Convertit en format Django (RetrievedChunk)

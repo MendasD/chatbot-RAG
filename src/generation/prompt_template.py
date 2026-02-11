@@ -306,52 +306,56 @@ DOCUMENTS DE RÉFÉRENCE :
         
         clean_response = response
         
-        # 1. Extraction des blocs avec ou sans crochets
-        # On définit les tags et leurs variantes possibles (notamment traduites)
-        tag_map = {
-            'sources_used': ['SOURCES_USED', 'SOURCES_UTILISEES', 'SOURCES_UTILISEE', 'SOURCE_USED'],
-            'images_used': ['IMAGES_USED', 'IMAGES_UTILISEES', 'IMAGES_UTILISEE', 'IMAGE_USED'],
-            'equations_used': ['EQUATIONS_USED', 'FORMULES_UTILISEES', 'EQUATION_USED'],
-            'follow_up_questions': ['FOLLOW_UP_QUESTIONS', 'FOLLOW_UP_QUESTION', 'QUESTIONS_SUGGEREES', 'SUITE_DE_QUESTION', 'SUITE_DE_QUESTIONS']
-        }
-        
-        # Liste plate de tous les tags pour la regex de lookahead
-        all_tags = []
-        for variants in tag_map.values():
-            all_tags.extend(variants)
-        
-        for key, variants in tag_map.items():
-            # Crée un pattern pour toutes les variantes du tag
-            tag_pattern = '|'.join(variants)
-            lookahead_pattern = '|'.join(all_tags)
+        try:
+            # 1. Extraction simple ligne par ligne pour plus de stabilité
+            lines = clean_response.split('\n')
+            final_lines = []
             
-            # Match le tag et son contenu jusqu'au prochain tag connu ou la fin
-            pattern = rf'(?:{tag_pattern})\s*:\s*(?:\[(.*?)\]|(.*?))(?=\s*(?:{lookahead_pattern})|$)'
+            tag_patterns = {
+                'sources_used': re.compile(r'^(?:SOURCES_USED|SOURCES_UTILISEES|SOURCES_UTILISEE|SOURCE_USED)\s*:\s*(.*)', re.I),
+                'images_used': re.compile(r'^(?:IMAGES_USED|IMAGES_UTILISEES|IMAGES_UTILISEE|IMAGE_USED)\s*:\s*(.*)', re.I),
+                'equations_used': re.compile(r'^(?:EQUATIONS_USED|FORMULES_UTILISEES|EQUATION_USED)\s*:\s*(.*)', re.I),
+                'follow_up_questions': re.compile(r'^(?:FOLLOW_UP_QUESTIONS|FOLLOW_UP_QUESTION|QUESTIONS_SUGGEREES|SUITE_DE_QUESTION|SUITE_DE_QUESTIONS)\s*:\s*(.*)', re.I)
+            }
+
+            for line in lines:
+                matched = False
+                for key, pattern in tag_patterns.items():
+                    match = pattern.match(line.strip())
+                    if match:
+                        content = match.group(1).strip()
+                        # Nettoie les crochets si présents
+                        content = content.strip('[] ')
+                        # Split les items
+                        items = [item.strip() for item in re.split(r'[;,\n]', content) if item.strip()]
+                        # Nettoyage supplémentaire des guillemets
+                        items = [item.strip('"\' ') for item in items]
+                        metadata[key].extend(items)
+                        matched = True
+                        break
+                
+                if not matched:
+                    # Garde la ligne si ce n'est pas un bloc de métadonnées
+                    # On vérifie seulement les tags les plus fréquents pour éviter de tout supprimer
+                    if not any(tag in line.upper() for tag in ['SOURCES_USED:', 'IMAGES_USED:', 'FOLLOW_UP_QUESTIONS:']):
+                        final_lines.append(line)
             
-            match = re.search(pattern, clean_response, re.DOTALL | re.IGNORECASE)
-            if match:
-                full_match = match.group(0)
-                # On prend soit le contenu entre crochets (group 1) soit le reste (group 2)
-                content = (match.group(1) or match.group(2) or "").strip()
+            clean_response = '\n'.join(final_lines).strip()
+            
+            # 2. Nettoyage final des phrases de transition
+            phrases_a_supprimer = [
+                r'^(?i)Voici la réponse.*?:',
+                r'^(?i)MÉTADONNÉES.*',
+                r'^(?i)BLOC DE FONCTIONS.*'
+            ]
+            for p in phrases_a_supprimer:
+                clean_response = re.sub(p, '', clean_response, flags=re.M).strip()
                 
-                # Parse la liste (split par , ou ; ou \n ou par '?' suivi d'un espace ou fin de ligne)
-                items = [item.strip() for item in re.split(r'[;,\n]|(?<=\?)(?=\s|$)', content) if item.strip()]
-                # Nettoyage supplémentaire pour enlever les crochets résiduels si group 2 a été utilisé
-                items = [item.strip('[] ') for item in items]
-                metadata[key] = [i for i in items if i]
-                
-                # Retire le bloc de la réponse
-                clean_response = clean_response.replace(full_match, '')
-        
-        # Nettoyage final des espaces multiples, lignes vides et symboles résiduels (comme **)
-        # On supprime aussi les titres de blocs vides comme "BLOC DE FONCTIONS" ou "MÉTADONNÉES"
-        clean_response = re.sub(r'(?i)\n*.*?(?:BLOC DE FONCTIONS|MÉTADONNÉES|VOICI LA RÉPONSE RÉFORMATÉE|MÉTA-DONNÉES).*?\n*', '\n\n', clean_response)
-        clean_response = re.sub(r'\n{3,}', '\n\n', clean_response)
-        clean_response = re.sub(r'\s*\**\s*$', '', clean_response).strip()
-        
-        # Si la réponse commence par "Voici...", on le supprime (fallback)
-        clean_response = re.sub(r'^(?i)Voici la réponse (?:réformatée|générée)?\s*:\s*', '', clean_response).strip()
-        
+        except Exception as e:
+            print(f"⚠️ Erreur lors de l'extraction des métadonnées: {e}")
+            # En cas d'erreur, on garde la réponse brute
+            clean_response = response
+
         return {
             'clean_response': clean_response,
             'metadata': metadata
