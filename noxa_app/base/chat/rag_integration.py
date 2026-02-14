@@ -202,6 +202,7 @@ class DjangoRAGService:
             # Fallback for namespace (if __default__ returns nothing, try empty string)
             if not enriched_chunks and namespace == '__default__':
                 logger.info("⚠️ No results in '__default__' namespace. Trying empty namespace...")
+                print("⚠️ No results in '__default__' namespace. Trying empty namespace...")
                 # We need to temporarily change the retriever namespace or call query directly
                 # For now, let's just log this possibility
             
